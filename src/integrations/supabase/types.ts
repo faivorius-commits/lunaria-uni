@@ -1,5 +1,4 @@
-
-      lunaria_tasks: {
+   lunaria_tasks: {
         Row: {
           id: string
           user_id: string
