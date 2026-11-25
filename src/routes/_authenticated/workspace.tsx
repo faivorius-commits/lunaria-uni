@@ -1,9 +1,10 @@
+
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Archive, CalendarDays, Check, CheckCircle2, Clock3,
   ListTodo, Plus, Sparkles, Trash2, XCircle, History,
-  Target, TrendingUp
+  Target, TrendingUp, Tag, UserRound, Filter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Hero } from "@/components/lunaria/app-shell";
@@ -31,6 +32,8 @@ type Task = {
   status: TaskStatus;
   progress: number;
   created_at: string;
+  labels: string[];
+  assigned_by: string;
 };
 
 type ProgressLog = {
@@ -41,6 +44,15 @@ type ProgressLog = {
   progress_percent: number;
   created_at: string;
 };
+
+const LABEL_PRESETS = [
+  "School",
+  "Organization",
+  "Personal",
+  "Project",
+  "Competition",
+  "Other",
+];
 
 const todayISO = () => {
   const date = new Date();
@@ -63,13 +75,17 @@ function Workspace() {
   const tasks = (taskQuery.data ?? []) as unknown as Task[];
 
   const [logs, setLogs] = useState<ProgressLog[]>([]);
-  const [loadingLogs, setLoadingLogs] = useState(true);
-  const [show, setShow] = useState<"active" | "completed" | "failed">("active");
+  const [show, setShow] = useState<TaskStatus>("active");
   const [type, setType] = useState<TaskType>("small");
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [due, setDue] = useState("");
+  const [assignedBy, setAssignedBy] = useState("");
+
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  const [customLabel, setCustomLabel] = useState("");
+  const [labelFilter, setLabelFilter] = useState("all");
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [progressNote, setProgressNote] = useState("");
@@ -87,7 +103,6 @@ function Workspace() {
       .order("log_date", { ascending: false });
 
     if (!error) setLogs((data ?? []) as ProgressLog[]);
-    setLoadingLogs(false);
   }
 
   // Automatically archive unfinished tasks after their deadline.
@@ -96,6 +111,7 @@ function Workspace() {
 
     async function expireTasks() {
       const today = todayISO();
+
       const expired = tasks.filter(
         (task) =>
           task.status === "active" &&
@@ -124,20 +140,70 @@ function Workspace() {
     return () => {
       cancelled = true;
     };
-  }, [tasks.map((task) => `${task.id}:${task.status}:${task.due_date}`).join("|")]);
+  }, [
+    tasks
+      .map((task) => `${task.id}:${task.status}:${task.due_date}`)
+      .join("|"),
+  ]);
 
   useEffect(() => {
     refreshLogs();
   }, []);
 
+  const availableLabels = useMemo(() => {
+    const labels = tasks.flatMap((task) => task.labels ?? []);
+    return [...new Set([...LABEL_PRESETS, ...labels])].sort();
+  }, [tasks]);
+
   const filteredTasks = useMemo(
-    () => tasks.filter((task) => (task.status ?? (task.done ? "completed" : "active")) === show),
-    [tasks, show]
+    () =>
+      tasks.filter((task) => {
+        const status = task.status ?? (task.done ? "completed" : "active");
+        const matchesStatus = status === show;
+        const matchesLabel =
+          labelFilter === "all" ||
+          (task.labels ?? []).includes(labelFilter);
+
+        return matchesStatus && matchesLabel;
+      }),
+    [tasks, show, labelFilter]
   );
 
-  const activeCount = tasks.filter((task) => task.status === "active").length;
-  const completedCount = tasks.filter((task) => task.status === "completed" || task.done).length;
-  const failedCount = tasks.filter((task) => task.status === "failed").length;
+  const activeCount = tasks.filter(
+    (task) => task.status === "active"
+  ).length;
+
+  const completedCount = tasks.filter(
+    (task) => task.status === "completed" || task.done
+  ).length;
+
+  const failedCount = tasks.filter(
+    (task) => task.status === "failed"
+  ).length;
+
+  function toggleLabel(label: string) {
+    setSelectedLabels((current) =>
+      current.includes(label)
+        ? current.filter((item) => item !== label)
+        : [...current, label]
+    );
+  }
+
+  function addCustomLabel() {
+    const label = customLabel.trim();
+
+    if (!label) return;
+
+    if (
+      !selectedLabels.some(
+        (item) => item.toLowerCase() === label.toLowerCase()
+      )
+    ) {
+      setSelectedLabels((current) => [...current, label]);
+    }
+
+    setCustomLabel("");
+  }
 
   async function addTask(e: React.FormEvent) {
     e.preventDefault();
@@ -148,11 +214,14 @@ function Workspace() {
 
     const { error } = await supabase.from("lunaria_tasks").insert({
       title: title.trim(),
+      description: description.trim(),
       due_date: due,
       task_type: type,
       status: "active",
       progress: 0,
       done: false,
+      labels: selectedLabels,
+      assigned_by: assignedBy.trim(),
     } as any);
 
     setSaving(false);
@@ -165,11 +234,18 @@ function Workspace() {
     setTitle("");
     setDescription("");
     setDue("");
+    setAssignedBy("");
+    setSelectedLabels([]);
+    setCustomLabel("");
+
     await refreshTasks();
   }
 
   async function completeTask(task: Task) {
-    const confirmed = confirm(`Mark "${task.title}" as completed?`);
+    const confirmed = confirm(
+      `Mark "${task.title}" as completed?`
+    );
+
     if (!confirmed) return;
 
     const { error } = await supabase
@@ -236,6 +312,7 @@ function Workspace() {
 
     setProgressNote("");
     setSelectedTask(null);
+
     await Promise.all([refreshTasks(), refreshLogs()]);
   }
 
@@ -266,17 +343,20 @@ function Workspace() {
         blurb="Little steps, big dreams. Organize your journey."
       />
 
+      {/* TASK STATISTICS */}
       <div className="mb-6 grid grid-cols-3 gap-3">
         <div className="panel p-4">
           <ListTodo className="mb-2 size-5 text-primary" />
           <p className="text-2xl font-semibold">{activeCount}</p>
           <p className="text-xs text-muted-foreground">Active</p>
         </div>
+
         <div className="panel p-4">
           <CheckCircle2 className="mb-2 size-5 text-emerald-500" />
           <p className="text-2xl font-semibold">{completedCount}</p>
           <p className="text-xs text-muted-foreground">Completed</p>
         </div>
+
         <div className="panel p-4">
           <Archive className="mb-2 size-5 text-rose-400" />
           <p className="text-2xl font-semibold">{failedCount}</p>
@@ -284,6 +364,7 @@ function Workspace() {
         </div>
       </div>
 
+      {/* CREATE TASK */}
       <section className="panel mb-6 p-5">
         <PanelTitle icon={Sparkles} title="Create a new task" />
 
@@ -339,7 +420,100 @@ function Workspace() {
             rows={2}
           />
 
+          {/* LABEL SELECTION */}
+          <div>
+            <label className="mb-2 flex items-center gap-2 text-sm font-medium">
+              <Tag className="size-4" />
+              Task labels
+            </label>
+
+            <div className="flex flex-wrap gap-2">
+              {LABEL_PRESETS.map((label) => {
+                const selected = selectedLabels.includes(label);
+
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => toggleLabel(label)}
+                    className={`rounded-full border px-3 py-1.5 text-xs transition ${
+                      selected
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-border bg-secondary/50 text-muted-foreground"
+                    }`}
+                  >
+                    {selected ? "✓ " : "+ "}
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 flex gap-2">
+              <input
+                className={fieldCls}
+                placeholder="Create a custom label..."
+                value={customLabel}
+                onChange={(e) => setCustomLabel(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCustomLabel();
+                  }
+                }}
+              />
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addCustomLabel}
+                disabled={!customLabel.trim()}
+              >
+                <Plus className="size-4" />
+              </Button>
+            </div>
+
+            {selectedLabels.some(
+              (label) => !LABEL_PRESETS.includes(label)
+            ) && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {selectedLabels
+                  .filter((label) => !LABEL_PRESETS.includes(label))
+                  .map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => toggleLabel(label)}
+                      className="rounded-full bg-violet-500/10 px-3 py-1.5 text-xs text-violet-600"
+                    >
+                      {label} ×
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* ASSIGNED BY */}
+          <div>
+            <label className="mb-2 flex items-center gap-2 text-sm font-medium">
+              <UserRound className="size-4" />
+              Assigned by
+              <span className="text-xs font-normal text-muted-foreground">
+                (optional)
+              </span>
+            </label>
+
+            <input
+              className={fieldCls}
+              placeholder="Who gave you this task?"
+              value={assignedBy}
+              onChange={(e) => setAssignedBy(e.target.value)}
+              maxLength={120}
+            />
+          </div>
+
           <label className="text-sm font-medium">Deadline</label>
+
           <input
             className={fieldCls}
             type="date"
@@ -356,9 +530,11 @@ function Workspace() {
         </form>
       </section>
 
+      {/* TASK LIST */}
       <section className="panel mb-6 p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <PanelTitle icon={ListTodo} title="Your task space" />
+
           <div className="flex gap-1">
             {(["active", "completed", "failed"] as const).map((item) => (
               <button
@@ -376,8 +552,28 @@ function Workspace() {
           </div>
         </div>
 
+        {/* LABEL FILTER */}
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <Filter className="size-4 text-muted-foreground" />
+
+          <select
+            className={`${fieldCls} max-w-xs`}
+            value={labelFilter}
+            onChange={(e) => setLabelFilter(e.target.value)}
+          >
+            <option value="all">All labels</option>
+            {availableLabels.map((label) => (
+              <option key={label} value={label}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {taskQuery.isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading tasks...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading tasks...
+          </p>
         ) : filteredTasks.length === 0 ? (
           <Empty
             title={
@@ -403,25 +599,63 @@ function Workspace() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full px-2.5 py-1 text-xs ${
-                          isLong
-                            ? "bg-violet-500/10 text-violet-600"
-                            : "bg-amber-500/10 text-amber-600"
-                        }`}>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs ${
+                            isLong
+                              ? "bg-violet-500/10 text-violet-600"
+                              : "bg-amber-500/10 text-amber-600"
+                          }`}
+                        >
                           {isLong ? "✦ Long Task" : "✧ Small Task"}
                         </span>
 
                         {task.status === "completed" && (
-                          <span className="text-xs text-emerald-600">Completed</span>
+                          <span className="text-xs text-emerald-600">
+                            Completed
+                          </span>
                         )}
+
                         {task.status === "failed" && (
-                          <span className="text-xs text-rose-500">Failed</span>
+                          <span className="text-xs text-rose-500">
+                            Failed
+                          </span>
                         )}
                       </div>
 
-                      <h3 className="font-semibold break-words">{task.title}</h3>
+                      <h3 className="break-words font-semibold">
+                        {task.title}
+                      </h3>
 
-                      <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                      {task.description && (
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                          {task.description}
+                        </p>
+                      )}
+
+                      {/* TASK LABELS */}
+                      {(task.labels ?? []).length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {(task.labels ?? []).map((label) => (
+                            <span
+                              key={label}
+                              className="rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-xs text-primary"
+                            >
+                              <Tag className="mr-1 inline size-3" />
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* ASSIGNED BY */}
+                      {task.assigned_by && (
+                        <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                          <UserRound className="size-3.5" />
+                          Assigned by: {task.assigned_by}
+                        </p>
+                      )}
+
+                      <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                         <CalendarDays className="size-3.5" />
                         Deadline: {formatDate(task.due_date)}
                       </p>
@@ -436,6 +670,7 @@ function Workspace() {
                     </button>
                   </div>
 
+                  {/* LONG TASK PROGRESS */}
                   {isLong && (
                     <div className="mt-4">
                       <div className="mb-2 flex justify-between text-xs">
@@ -449,7 +684,9 @@ function Workspace() {
                       <div className="h-2 overflow-hidden rounded-full bg-secondary">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-violet-400 to-pink-400 transition-all"
-                          style={{ width: `${task.progress ?? 0}%` }}
+                          style={{
+                            width: `${task.progress ?? 0}%`,
+                          }}
                         />
                       </div>
 
@@ -460,7 +697,9 @@ function Workspace() {
                           className="mt-3 rounded-full"
                           onClick={() => {
                             setSelectedTask(task);
-                            setProgressValue(String(task.progress ?? 0));
+                            setProgressValue(
+                              String(task.progress ?? 0)
+                            );
                           }}
                         >
                           <Plus className="mr-1 size-3.5" />
@@ -489,7 +728,9 @@ function Workspace() {
                                   <b>{formatDate(log.log_date)}</b>
                                   <span>{log.progress_percent}%</span>
                                 </div>
-                                <p className="text-sm">{log.progress_note}</p>
+                                <p className="text-sm">
+                                  {log.progress_note}
+                                </p>
                               </div>
                             ))}
                           </div>
@@ -498,6 +739,7 @@ function Workspace() {
                     </div>
                   )}
 
+                  {/* COMPLETE TASK */}
                   {task.status === "active" && (
                     <Button
                       size="sm"
@@ -522,11 +764,19 @@ function Workspace() {
         )}
       </section>
 
+      {/* DAILY PROGRESS FORM */}
       {selectedTask && (
         <div className="panel mb-6 p-5">
           <div className="mb-4 flex items-center justify-between">
-            <PanelTitle icon={TrendingUp} title="Today's progress" />
-            <button onClick={() => setSelectedTask(null)} aria-label="Close">
+            <PanelTitle
+              icon={TrendingUp}
+              title="Today's progress"
+            />
+
+            <button
+              onClick={() => setSelectedTask(null)}
+              aria-label="Close"
+            >
               <XCircle className="size-5" />
             </button>
           </div>
@@ -535,10 +785,14 @@ function Workspace() {
             {selectedTask.title}
           </p>
 
-          <form onSubmit={saveDailyProgress} className="space-y-3">
+          <form
+            onSubmit={saveDailyProgress}
+            className="space-y-3"
+          >
             <label className="text-sm font-medium">
               What did you work on today?
             </label>
+
             <textarea
               className={fieldCls}
               rows={3}
@@ -551,6 +805,7 @@ function Workspace() {
             <label className="text-sm font-medium">
               Overall progress (%)
             </label>
+
             <input
               className={fieldCls}
               type="number"
@@ -562,8 +817,8 @@ function Workspace() {
             />
 
             <p className="text-xs text-muted-foreground">
-              You can save one progress entry per day. Saving again today
-              updates that day's entry.
+              You can save one progress entry per day. Saving again
+              today updates that day's entry.
             </p>
 
             <Button disabled={saving || !progressNote.trim()}>
