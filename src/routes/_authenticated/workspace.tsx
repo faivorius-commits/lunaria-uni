@@ -1,38 +1,583 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Check, LayoutDashboard, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Archive, CalendarDays, Check, CheckCircle2, Clock3,
+  ListTodo, Plus, Sparkles, Trash2, XCircle, History,
+  Target, TrendingUp
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Hero } from "@/components/lunaria/app-shell";
 import { Empty, PanelTitle, fieldCls } from "@/components/lunaria/bits";
 import { FileGallery } from "@/components/lunaria/file-gallery";
-import { useMutate, useRows } from "@/lib/data";
+import { supabase } from "@/integrations/supabase/client";
+import { useRows } from "@/lib/data";
 import { pageHead } from "@/lib/head";
 
-export const Route = createFileRoute("/_authenticated/workspace")({ head: pageHead("Workspace", "Your projects, plans, and ideas live here."), component: Workspace });
+export const Route = createFileRoute("/_authenticated/workspace")({
+  head: pageHead("Workspace", "Your tasks, projects, and progress."),
+  component: Workspace,
+});
+
+type TaskType = "small" | "long";
+type TaskStatus = "active" | "completed" | "failed";
+
+type Task = {
+  id: string;
+  title: string;
+  description?: string;
+  due_date: string | null;
+  done: boolean;
+  task_type: TaskType;
+  status: TaskStatus;
+  progress: number;
+  created_at: string;
+};
+
+type ProgressLog = {
+  id: string;
+  task_id: string;
+  log_date: string;
+  progress_note: string;
+  progress_percent: number;
+  created_at: string;
+};
+
+const todayISO = () => {
+  const date = new Date();
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
+};
+
+const formatDate = (date?: string | null) =>
+  date
+    ? new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "No deadline";
 
 function Workspace() {
-  const tasks = useRows("lunaria_tasks"); const m = useMutate("lunaria_tasks");
-  const [title, setTitle] = useState(""); const [due, setDue] = useState(""); const [show, setShow] = useState<"open" | "done" | "all">("open");
-  const list = (tasks.data ?? []).filter((t) => show === "all" || (show === "done" ? t.done : !t.done));
-  return (<>
-    <Hero title="Workspace" blurb="Your projects, plans, and ideas live here." />
-    <section className="panel mb-6 p-5">
-      <PanelTitle icon={LayoutDashboard} title="Little plans" />
-      <form className="mb-4 flex flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); if (!title.trim()) return; m.insert.mutate({ title: title.trim(), due_date: due || null }, { onSuccess: () => { setTitle(""); setDue(""); } }); }}>
-        <input className={fieldCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Add a little task…" maxLength={240} />
-        <input className={`${fieldCls} sm:w-44`} type="date" value={due} onChange={(e) => setDue(e.target.value)} aria-label="Due date" />
-        <Button className="rounded-full" disabled={m.insert.isPending}><Plus /> Add</Button>
-      </form>
-      <div className="mb-3 flex gap-1">{(["open", "done", "all"] as const).map((s) => <button key={s} onClick={() => setShow(s)} className={`rounded-full px-3 py-1 text-sm capitalize ${show === s ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{s}</button>)}</div>
-      {list.length === 0 ? <Empty title="All clear" text="Add a task above to start shaping your day." /> : (
-        <ul className="divide-y">{list.map((t) => (
-          <li key={t.id} className="flex items-center gap-3 py-2">
-            <button aria-label={t.done ? "Mark not done" : "Mark done"} onClick={() => m.update.mutate({ id: t.id, done: !t.done })} className={`grid size-6 shrink-0 place-items-center rounded-full border ${t.done ? "bg-primary text-primary-foreground" : ""}`}>{t.done && <Check className="size-3.5" />}</button>
-            <span className={`flex-1 ${t.done ? "line-through opacity-60" : ""}`}>{t.title}</span>
-            {t.due_date && <span className="text-xs text-muted-foreground">{t.due_date}</span>}
-            <Button variant="ghost" size="icon" aria-label="Delete task" onClick={() => m.remove.mutate(t.id)}><Trash2 /></Button>
-          </li>))}</ul>)}
-    </section>
-    <FileGallery filter={(f) => f.category === "Workspace"} category="Workspace" emptyTitle="No project files yet" />
-  </>);
+  const taskQuery = useRows("lunaria_tasks");
+  const tasks = (taskQuery.data ?? []) as unknown as Task[];
+
+  const [logs, setLogs] = useState<ProgressLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(true);
+  const [show, setShow] = useState<"active" | "completed" | "failed">("active");
+  const [type, setType] = useState<TaskType>("small");
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [due, setDue] = useState("");
+
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [progressNote, setProgressNote] = useState("");
+  const [progressValue, setProgressValue] = useState("10");
+  const [saving, setSaving] = useState(false);
+
+  async function refreshTasks() {
+    await taskQuery.refetch();
+  }
+
+  async function refreshLogs() {
+    const { data, error } = await supabase
+      .from("task_progress_logs" as any)
+      .select("*")
+      .order("log_date", { ascending: false });
+
+    if (!error) setLogs((data ?? []) as ProgressLog[]);
+    setLoadingLogs(false);
+  }
+
+  // Automatically archive unfinished tasks after their deadline.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function expireTasks() {
+      const today = todayISO();
+      const expired = tasks.filter(
+        (task) =>
+          task.status === "active" &&
+          !task.done &&
+          task.due_date &&
+          task.due_date < today
+      );
+
+      for (const task of expired) {
+        if (cancelled) return;
+
+        await supabase
+          .from("lunaria_tasks")
+          .update({ status: "failed" } as any)
+          .eq("id", task.id)
+          .eq("status", "active");
+      }
+
+      if (expired.length > 0 && !cancelled) {
+        await refreshTasks();
+      }
+    }
+
+    expireTasks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tasks.map((task) => `${task.id}:${task.status}:${task.due_date}`).join("|")]);
+
+  useEffect(() => {
+    refreshLogs();
+  }, []);
+
+  const filteredTasks = useMemo(
+    () => tasks.filter((task) => (task.status ?? (task.done ? "completed" : "active")) === show),
+    [tasks, show]
+  );
+
+  const activeCount = tasks.filter((task) => task.status === "active").length;
+  const completedCount = tasks.filter((task) => task.status === "completed" || task.done).length;
+  const failedCount = tasks.filter((task) => task.status === "failed").length;
+
+  async function addTask(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!title.trim() || !due) return;
+
+    setSaving(true);
+
+    const { error } = await supabase.from("lunaria_tasks").insert({
+      title: title.trim(),
+      due_date: due,
+      task_type: type,
+      status: "active",
+      progress: 0,
+      done: false,
+    } as any);
+
+    setSaving(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setTitle("");
+    setDescription("");
+    setDue("");
+    await refreshTasks();
+  }
+
+  async function completeTask(task: Task) {
+    const confirmed = confirm(`Mark "${task.title}" as completed?`);
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from("lunaria_tasks")
+      .update({
+        done: true,
+        status: "completed",
+        progress: 100,
+        completed_at: new Date().toISOString(),
+      } as any)
+      .eq("id", task.id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await refreshTasks();
+  }
+
+  async function saveDailyProgress(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!selectedTask || !progressNote.trim()) return;
+
+    const newProgress = Math.min(
+      99,
+      Math.max(0, Number(progressValue) || 0)
+    );
+
+    setSaving(true);
+
+    const today = todayISO();
+
+    const { error: logError } = await supabase
+      .from("task_progress_logs" as any)
+      .upsert(
+        {
+          task_id: selectedTask.id,
+          log_date: today,
+          progress_note: progressNote.trim(),
+          progress_percent: newProgress,
+        },
+        { onConflict: "task_id,log_date" }
+      );
+
+    if (logError) {
+      setSaving(false);
+      alert(logError.message);
+      return;
+    }
+
+    const { error: taskError } = await supabase
+      .from("lunaria_tasks")
+      .update({ progress: newProgress } as any)
+      .eq("id", selectedTask.id);
+
+    setSaving(false);
+
+    if (taskError) {
+      alert(taskError.message);
+      return;
+    }
+
+    setProgressNote("");
+    setSelectedTask(null);
+    await Promise.all([refreshTasks(), refreshLogs()]);
+  }
+
+  async function deleteTask(task: Task) {
+    if (!confirm(`Delete "${task.title}" permanently?`)) return;
+
+    const { error } = await supabase
+      .from("lunaria_tasks")
+      .delete()
+      .eq("id", task.id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await Promise.all([refreshTasks(), refreshLogs()]);
+  }
+
+  function taskLogs(taskId: string) {
+    return logs.filter((log) => log.task_id === taskId);
+  }
+
+  return (
+    <>
+      <Hero
+        title="Workspace"
+        blurb="Little steps, big dreams. Organize your journey."
+      />
+
+      <div className="mb-6 grid grid-cols-3 gap-3">
+        <div className="panel p-4">
+          <ListTodo className="mb-2 size-5 text-primary" />
+          <p className="text-2xl font-semibold">{activeCount}</p>
+          <p className="text-xs text-muted-foreground">Active</p>
+        </div>
+        <div className="panel p-4">
+          <CheckCircle2 className="mb-2 size-5 text-emerald-500" />
+          <p className="text-2xl font-semibold">{completedCount}</p>
+          <p className="text-xs text-muted-foreground">Completed</p>
+        </div>
+        <div className="panel p-4">
+          <Archive className="mb-2 size-5 text-rose-400" />
+          <p className="text-2xl font-semibold">{failedCount}</p>
+          <p className="text-xs text-muted-foreground">Failed</p>
+        </div>
+      </div>
+
+      <section className="panel mb-6 p-5">
+        <PanelTitle icon={Sparkles} title="Create a new task" />
+
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setType("small")}
+            className={`rounded-2xl border p-4 text-left transition ${
+              type === "small"
+                ? "border-primary bg-primary/10"
+                : "border-border bg-secondary/40"
+            }`}
+          >
+            <Clock3 className="mb-2 size-5 text-amber-500" />
+            <b>Small Task</b>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Quick task, one-time completion
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setType("long")}
+            className={`rounded-2xl border p-4 text-left transition ${
+              type === "long"
+                ? "border-primary bg-primary/10"
+                : "border-border bg-secondary/40"
+            }`}
+          >
+            <Target className="mb-2 size-5 text-violet-500" />
+            <b>Long Task</b>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Multi-day project with daily progress
+            </p>
+          </button>
+        </div>
+
+        <form onSubmit={addTask} className="flex flex-col gap-3">
+          <input
+            className={fieldCls}
+            placeholder="What do you want to accomplish?"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={240}
+            required
+          />
+
+          <textarea
+            className={fieldCls}
+            placeholder="Description (optional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+          />
+
+          <label className="text-sm font-medium">Deadline</label>
+          <input
+            className={fieldCls}
+            type="date"
+            value={due}
+            min={todayISO()}
+            onChange={(e) => setDue(e.target.value)}
+            required
+          />
+
+          <Button disabled={saving || !title.trim() || !due}>
+            <Plus className="mr-1 size-4" />
+            Create {type === "small" ? "Small Task" : "Long Task"}
+          </Button>
+        </form>
+      </section>
+
+      <section className="panel mb-6 p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <PanelTitle icon={ListTodo} title="Your task space" />
+          <div className="flex gap-1">
+            {(["active", "completed", "failed"] as const).map((item) => (
+              <button
+                key={item}
+                onClick={() => setShow(item)}
+                className={`rounded-full px-3 py-1.5 text-xs capitalize ${
+                  show === item
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary"
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {taskQuery.isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading tasks...</p>
+        ) : filteredTasks.length === 0 ? (
+          <Empty
+            title={
+              show === "active"
+                ? "A fresh page awaits"
+                : show === "completed"
+                  ? "No completed tasks yet"
+                  : "No failed tasks"
+            }
+            text="Your task journey will appear here."
+          />
+        ) : (
+          <div className="space-y-4">
+            {filteredTasks.map((task) => {
+              const history = taskLogs(task.id);
+              const isLong = task.task_type === "long";
+
+              return (
+                <article
+                  key={task.id}
+                  className="rounded-2xl border border-border/70 bg-background/50 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full px-2.5 py-1 text-xs ${
+                          isLong
+                            ? "bg-violet-500/10 text-violet-600"
+                            : "bg-amber-500/10 text-amber-600"
+                        }`}>
+                          {isLong ? "✦ Long Task" : "✧ Small Task"}
+                        </span>
+
+                        {task.status === "completed" && (
+                          <span className="text-xs text-emerald-600">Completed</span>
+                        )}
+                        {task.status === "failed" && (
+                          <span className="text-xs text-rose-500">Failed</span>
+                        )}
+                      </div>
+
+                      <h3 className="font-semibold break-words">{task.title}</h3>
+
+                      <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                        <CalendarDays className="size-3.5" />
+                        Deadline: {formatDate(task.due_date)}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => deleteTask(task)}
+                      className="rounded-full p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      aria-label="Delete task"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+
+                  {isLong && (
+                    <div className="mt-4">
+                      <div className="mb-2 flex justify-between text-xs">
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <TrendingUp className="size-3.5" />
+                          Overall progress
+                        </span>
+                        <b>{task.progress ?? 0}%</b>
+                      </div>
+
+                      <div className="h-2 overflow-hidden rounded-full bg-secondary">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-violet-400 to-pink-400 transition-all"
+                          style={{ width: `${task.progress ?? 0}%` }}
+                        />
+                      </div>
+
+                      {task.status === "active" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-3 rounded-full"
+                          onClick={() => {
+                            setSelectedTask(task);
+                            setProgressValue(String(task.progress ?? 0));
+                          }}
+                        >
+                          <Plus className="mr-1 size-3.5" />
+                          Add today's progress
+                        </Button>
+                      )}
+
+                      <div className="mt-4">
+                        <p className="mb-2 flex items-center gap-2 text-xs font-semibold">
+                          <History className="size-3.5" />
+                          Daily progress history
+                        </p>
+
+                        {history.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">
+                            No progress entries yet.
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {history.map((log) => (
+                              <div
+                                key={log.id}
+                                className="rounded-xl bg-secondary/60 p-3"
+                              >
+                                <div className="mb-1 flex justify-between text-xs">
+                                  <b>{formatDate(log.log_date)}</b>
+                                  <span>{log.progress_percent}%</span>
+                                </div>
+                                <p className="text-sm">{log.progress_note}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {task.status === "active" && (
+                    <Button
+                      size="sm"
+                      className="mt-4 rounded-full"
+                      onClick={() => completeTask(task)}
+                    >
+                      <Check className="mr-1 size-4" />
+                      Mark as completed
+                    </Button>
+                  )}
+
+                  {task.status === "failed" && (
+                    <p className="mt-3 flex items-center gap-2 text-xs text-rose-500">
+                      <XCircle className="size-4" />
+                      Deadline passed before completion.
+                    </p>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {selectedTask && (
+        <div className="panel mb-6 p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <PanelTitle icon={TrendingUp} title="Today's progress" />
+            <button onClick={() => setSelectedTask(null)} aria-label="Close">
+              <XCircle className="size-5" />
+            </button>
+          </div>
+
+          <p className="mb-3 text-sm text-muted-foreground">
+            {selectedTask.title}
+          </p>
+
+          <form onSubmit={saveDailyProgress} className="space-y-3">
+            <label className="text-sm font-medium">
+              What did you work on today?
+            </label>
+            <textarea
+              className={fieldCls}
+              rows={3}
+              placeholder="Write a little update about today's work..."
+              value={progressNote}
+              onChange={(e) => setProgressNote(e.target.value)}
+              required
+            />
+
+            <label className="text-sm font-medium">
+              Overall progress (%)
+            </label>
+            <input
+              className={fieldCls}
+              type="number"
+              min="0"
+              max="99"
+              value={progressValue}
+              onChange={(e) => setProgressValue(e.target.value)}
+              required
+            />
+
+            <p className="text-xs text-muted-foreground">
+              You can save one progress entry per day. Saving again today
+              updates that day's entry.
+            </p>
+
+            <Button disabled={saving || !progressNote.trim()}>
+              Save daily progress
+            </Button>
+          </form>
+        </div>
+      )}
+
+      <FileGallery
+        filter={(f) => f.category === "Workspace"}
+        category="Workspace"
+        emptyTitle="No project files yet"
+      />
+    </>
+  );
 }
