@@ -7,6 +7,7 @@ import { Empty, PanelTitle, fieldCls } from "@/components/lunaria/bits";
 import { FileGallery } from "@/components/lunaria/file-gallery";
 import { useMutate, useRows } from "@/lib/data";
 import { pageHead } from "@/lib/head";
+import { RecipesPanel } from "@/components/lunaria/recipes";
 
 export const Route = createFileRoute("/_authenticated/collections")({ head: pageHead("Collections", "All your favorite things, gathered together."), component: C });
 const EMOJI = ["✧", "✿", "☾", "♡", "★", "❀", "♪", "📚", "🎞️", "🧸"];
@@ -16,6 +17,7 @@ function C() {
   const current = (cols.data ?? []).find((c) => c.id === sel);
   const count = (id: string) => (files.data ?? []).filter((f) => f.collection_id === id).length;
   return (<>
+    <RecipesPanel />
     <Hero title="Collections" blurb="All your favorite things, gathered together." />
     <section className="panel mb-6 p-5">
       <PanelTitle icon={Archive} title="Create a collection" tone="bg-butter" />
