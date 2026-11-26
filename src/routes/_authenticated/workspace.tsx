@@ -117,11 +117,12 @@ function Workspace() {
 
   console.log("Logged in:", !!user);
   console.log("Visible history rows:", data?.length ?? 0);
-
-  alert(
-    `Login: ${user ? "Yes" : "No"}\nVisible history rows: ${data?.length ?? 0}`
-  );
-
+     
+alert(
+  `Login: ${user ? "Yes" : "No"}\n` +
+  `App User ID: ${user?.id ?? "NULL"}\n` +
+  `Visible history rows: ${data?.length ?? 0}`
+);
   setLogs((data ?? []) as ProgressLog[]);
    }
 
