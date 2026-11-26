@@ -102,7 +102,14 @@ function Workspace() {
       .select("*")
       .order("log_date", { ascending: false });
 
-    if (!error) setLogs((data ?? []) as ProgressLog[]);
+  if (error) {
+    console.error("Failed to load progress logs:", error);
+    alert(`Failed to load progress history: ${error.message}`);
+    return;
+  }
+
+  setLogs((data ?? []) as ProgressLog[]);
+}
   }
 
   // Automatically archive unfinished tasks after their deadline.
