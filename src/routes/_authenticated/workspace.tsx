@@ -110,8 +110,6 @@ function Workspace() {
   }
 
   setLogs((data ?? []) as ProgressLog[]);
-  }
-  }
 
   // Automatically archive unfinished tasks after their deadline.
   useEffect(() => {
