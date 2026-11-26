@@ -96,11 +96,12 @@ function Workspace() {
     await taskQuery.refetch();
   }
 
+  
   async function refreshLogs() {
-    const { data, error } = await supabase
-      .from("task_progress_logs")
-      .select("*")
-      .order("log_date", { ascending: false });
+  const { data, error } = await supabase
+    .from("task_progress_logs")
+    .select("*")
+    .order("log_date", { ascending: false });
 
   if (error) {
     console.error("Failed to load progress logs:", error);
@@ -109,7 +110,7 @@ function Workspace() {
   }
 
   setLogs((data ?? []) as ProgressLog[]);
-}
+  }
   }
 
   // Automatically archive unfinished tasks after their deadline.
