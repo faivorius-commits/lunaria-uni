@@ -1,4 +1,3 @@
-
 export type Json =
   | string
   | number
@@ -8,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "17.1"
   }
@@ -224,7 +225,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          body?: string
+          body: string
           created_at?: string
           id?: string
           tags?: string[]
@@ -245,89 +246,30 @@ export type Database = {
       }
       lunaria_tasks: {
         Row: {
-          id: string
-          user_id: string
-          title: string
-          description: string
+          created_at: string
           done: boolean
           due_date: string | null
-          created_at: string
-          task_type: string
-          status: string
-          progress: number
-          completed_at: string | null
-          labels: string[]
-          assigned_by: string
+          id: string
+          title: string
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id?: string
-          title: string
-          description?: string
+          created_at?: string
           done?: boolean
           due_date?: string | null
-          created_at?: string
-          task_type?: string
-          status?: string
-          progress?: number
-          completed_at?: string | null
-          labels?: string[]
-          assigned_by?: string
+          id?: string
+          title: string
+          user_id?: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          title?: string
-          description?: string
+          created_at?: string
           done?: boolean
           due_date?: string | null
-          created_at?: string
-          task_type?: string
-          status?: string
-          progress?: number
-          completed_at?: string | null
-          labels?: string[]
-          assigned_by?: string
+          id?: string
+          title?: string
+          user_id?: string
         }
         Relationships: []
-      }
-      task_progress_logs: {
-        Row: {
-          id: string
-          task_id: string
-          user_id: string
-          log_date: string
-          progress_percent: number
-          progress_note: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          task_id: string
-          user_id?: string
-          log_date?: string
-          progress_percent: number
-          progress_note?: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          task_id?: string
-          user_id?: string
-          log_date?: string
-          progress_percent?: number
-          progress_note?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_progress_logs_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "lunaria_tasks"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       profiles: {
         Row: {
@@ -444,7 +386,8 @@ export type Tables<
     : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
         DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -488,7 +431,7 @@ export type TablesUpdate<
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DefaultSchema[ "Tables" ][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -530,7 +473,7 @@ export type CompositeTypes<
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
