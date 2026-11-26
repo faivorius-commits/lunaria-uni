@@ -20,7 +20,7 @@ export function useRows<N extends TableName>(table: N, orderBy = "created_at", a
 
 export function useMutate<N extends TableName>(table: N) {
   const qc = useQueryClient();
-  const done = () => qc.invalidateQueries({ queryKey: [table] });
+  const done = () => Promise.all([qc.invalidateQueries({ queryKey: [table] }), qc.invalidateQueries({ queryKey: ["activity_logs"] })]);
   const fail = (e: Error) => toast.error(e.message);
   const run = async (p: PromiseLike<{ error: { message: string } | null }>) => {
     const { error } = await p;

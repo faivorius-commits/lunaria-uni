@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { ArrowUpRight, BookHeart, CalendarDays, Check, FileImage, FileText, Flower2, Folder, Gamepad2, Music2, Sprout, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Hero } from "@/components/lunaria/app-shell";
 import { PanelTitle } from "@/components/lunaria/bits";
 import { useUpload } from "@/components/lunaria/upload";
 import { useMutate, useRows, todayISO } from "@/lib/data";
@@ -20,16 +19,21 @@ function Home() {
   const today = todayISO();
   const h = new Date().getHours();
   const greeting = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-  const open = (tasks.data ?? []).filter((t) => !t.done || t.due_date === today).slice(0, 5);
+  const open = (tasks.data ?? []).filter((t) => t.status !== "failed" && (!t.done || t.due_date === today)).slice(0, 5);
   const done = (tasks.data ?? []).filter((t) => t.done).length;
   const upcoming = (events.data ?? []).filter((e) => e.event_date >= today).slice(0, 3);
   const doneToday = useMemo(() => new Set((checks.data ?? []).filter((c) => c.day === today).map((c) => c.habit_id)), [checks.data, today]);
   const dateLabel = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
   return (<>
-    <Hero title={`${greeting}, ${profile.data?.display_name ?? "dreamer"}`} blurb={`${dateLabel} · A new little chapter is waiting for you.`}
-      action={<Button className="rounded-full" onClick={() => upload()}>✧ Add to Lunaria</Button>} />
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <section className="world-welcome universe-cover mb-7">
+      <div className="room-kicker">Welcome to Lunaria</div>
+      <h1>{greeting},<br />{profile.data?.display_name ?? "dreamer"}<span className="text-gold"> ✧</span></h1>
+      <p className="mt-3 text-sm">{dateLabel} · Your little world is waiting.</p>
+      <Button className="mt-6 rounded-full" onClick={() => upload()}>✧ Add a little moment</Button>
+    </section>
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-2"><h2 className="text-3xl">Around your universe</h2><span className="text-sm text-muted-foreground">Little things, lovingly kept.</span></div>
+    <div className="dashboard-grid">
       <article className="panel p-5">
         <PanelTitle icon={CalendarDays} title="Today's little plan" right={<Link to="/workspace" className="text-xs text-primary">Planner ↗</Link>} />
         <p className="mb-2 text-xs text-muted-foreground">{done} of {(tasks.data ?? []).length} done</p>

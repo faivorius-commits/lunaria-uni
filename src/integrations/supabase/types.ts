@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          activity_type: string
+          created_at: string
+          description: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          description?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       calendar_events: {
         Row: {
           created_at: string
@@ -165,22 +198,34 @@ export type Database = {
         Row: {
           created_at: string
           emoji: string
+          frequency: string
+          frequency_mode: string
+          frequency_target: number
           id: string
           name: string
+          target_days: number[]
           user_id: string
         }
         Insert: {
           created_at?: string
           emoji?: string
+          frequency?: string
+          frequency_mode?: string
+          frequency_target?: number
           id?: string
           name: string
+          target_days?: number[]
           user_id?: string
         }
         Update: {
           created_at?: string
           emoji?: string
+          frequency?: string
+          frequency_mode?: string
+          frequency_target?: number
           id?: string
           name?: string
+          target_days?: number[]
           user_id?: string
         }
         Relationships: []
@@ -246,26 +291,47 @@ export type Database = {
       }
       lunaria_tasks: {
         Row: {
+          assigned_by: string
+          completed_at: string | null
           created_at: string
+          description: string
           done: boolean
           due_date: string | null
           id: string
+          labels: string[]
+          progress: number
+          status: string
+          task_type: string
           title: string
           user_id: string
         }
         Insert: {
+          assigned_by?: string
+          completed_at?: string | null
           created_at?: string
+          description?: string
           done?: boolean
           due_date?: string | null
           id?: string
+          labels?: string[]
+          progress?: number
+          status?: string
+          task_type?: string
           title: string
           user_id?: string
         }
         Update: {
+          assigned_by?: string
+          completed_at?: string | null
           created_at?: string
+          description?: string
           done?: boolean
           due_date?: string | null
           id?: string
+          labels?: string[]
+          progress?: number
+          status?: string
+          task_type?: string
           title?: string
           user_id?: string
         }
@@ -298,6 +364,89 @@ export type Database = {
         }
         Relationships: []
       }
+      recipes: {
+        Row: {
+          category: string
+          cook_minutes: number
+          created_at: string
+          description: string
+          difficulty: string
+          id: string
+          ingredients: string[]
+          prep_minutes: number
+          steps: string[]
+          title: string
+          tools: string[]
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          cook_minutes?: number
+          created_at?: string
+          description?: string
+          difficulty?: string
+          id?: string
+          ingredients?: string[]
+          prep_minutes?: number
+          steps?: string[]
+          title: string
+          tools?: string[]
+          user_id?: string
+        }
+        Update: {
+          category?: string
+          cook_minutes?: number
+          created_at?: string
+          description?: string
+          difficulty?: string
+          id?: string
+          ingredients?: string[]
+          prep_minutes?: number
+          steps?: string[]
+          title?: string
+          tools?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      task_progress_logs: {
+        Row: {
+          created_at: string
+          id: string
+          log_date: string
+          progress_note: string
+          progress_percent: number
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          log_date?: string
+          progress_note: string
+          progress_percent?: number
+          task_id: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          log_date?: string
+          progress_note?: string
+          progress_percent?: number
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_progress_logs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "lunaria_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_files: {
         Row: {
           caption: string
@@ -305,6 +454,11 @@ export type Database = {
           collection_id: string | null
           created_at: string
           id: string
+          memory_category: string
+          memory_date: string | null
+          memory_location: string
+          memory_tags: string[]
+          memory_title: string
           mime_type: string
           name: string
           size_bytes: number
@@ -317,6 +471,11 @@ export type Database = {
           collection_id?: string | null
           created_at?: string
           id?: string
+          memory_category?: string
+          memory_date?: string | null
+          memory_location?: string
+          memory_tags?: string[]
+          memory_title?: string
           mime_type?: string
           name: string
           size_bytes?: number
@@ -329,6 +488,11 @@ export type Database = {
           collection_id?: string | null
           created_at?: string
           id?: string
+          memory_category?: string
+          memory_date?: string | null
+          memory_location?: string
+          memory_tags?: string[]
+          memory_title?: string
           mime_type?: string
           name?: string
           size_bytes?: number

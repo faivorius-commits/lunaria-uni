@@ -14,7 +14,7 @@ function SideNav({ onNavigate }: { onNavigate?: () => void }) {
     const I = n.icon; const active = loc.pathname === n.to;
     return (
       <Link key={n.to} to={n.to} onClick={onNavigate}
-        className={`flex items-center gap-3 rounded-2xl px-3 py-2 text-sm transition ${active ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground shadow-sm" : "hover:bg-sidebar-accent/60"}`}>
+        className={`flex items-center gap-3 rounded-2xl px-3 py-2 text-sm transition ${active ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground shadow-sm ring-1 ring-primary/20 border-l-4 border-primary" : "hover:bg-sidebar-accent/60"}`}>
         <I className="size-4" /><span>{n.label}</span>
         {n.label === "Arcade" && <span className="ml-auto rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">NEW</span>}
       </Link>
@@ -106,7 +106,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Link to="/settings" aria-label="Profile and settings" className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-petal to-lilac text-lg">{profile.data?.avatar_emoji ?? "✿"}</Link>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-3 py-4 sm:px-6 sm:py-6">{children}</main>
+        <main key={loc.pathname} className="page-enter mx-auto w-full max-w-6xl flex-1 px-4 py-4 sm:px-8 sm:py-6">{children}</main>
         <footer className="pb-6 text-center text-sm text-muted-foreground">Made of little things and a little magic <span className="text-primary">✧</span></footer>
       </div>
     </div>
@@ -115,19 +115,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 export function Hero({ title, blurb, action }: { title: string; blurb: string; action?: ReactNode }) {
   return (
-    <section className="hero-gradient relative mb-6 overflow-hidden rounded-3xl border p-6 sm:p-8">
-      <div className="starfield pointer-events-none absolute inset-0" />
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end">
-        <div className="flex-1">
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-card/70 px-3 py-1 text-[11px] font-semibold tracking-widest"><span className="size-1.5 rounded-full bg-primary" /> YOUR LITTLE UNIVERSE</div>
-          <h1 className="text-3xl sm:text-4xl">{title}<span className="text-primary"> ✧</span></h1>
-          <p className="mt-1 text-muted-foreground">{blurb}</p>
+    <section className="room-hero">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
+          <div className="room-kicker">Lunaria / your little universe</div>
+          <h1 className="break-words">{title}<span className="room-mark"> ✧</span></h1>
+          <p className="mt-2 max-w-xl text-muted-foreground">{blurb}</p>
         </div>
         {action}
       </div>
-      <div aria-hidden className="pointer-events-none absolute -top-2 right-4 hidden text-6xl opacity-70 floaty sm:block">☾</div>
-      <span aria-hidden className="absolute right-24 top-6 text-primary twinkle">✦</span>
-      <span aria-hidden className="absolute right-10 bottom-6 text-primary twinkle [animation-delay:1s]">✧</span>
     </section>
   );
 }

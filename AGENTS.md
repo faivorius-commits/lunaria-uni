@@ -28,3 +28,10 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Application architecture
+- Extend existing Cloud-owned records additively; preserve original uploads and relationships to avoid data loss.
+- Habit period calculations live in the pure habit-schedule module with tests; weekly periods begin Monday and short-month selected dates clamp to the last day.
+- Photo metadata belongs to user_files while originals remain in private user-prefixed Storage paths; undated legacy photos stay undated.
+- Activity history is written by database triggers on successful changes, never fabricated by the browser; render timestamps in the user's local timezone.
+- Keep the automatic activity timeline and manual diary in separate tabs, preserving the journal capability.

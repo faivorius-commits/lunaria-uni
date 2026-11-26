@@ -1,0 +1,1 @@
+ALTER TABLE public.user_files ADD COLUMN memory_category text NOT NULL DEFAULT '';

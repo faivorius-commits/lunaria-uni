@@ -98,7 +98,7 @@ function Workspace() {
 
   async function refreshLogs() {
     const { data, error } = await supabase
-      .from("task_progress_logs" as any)
+      .from("task_progress_logs")
       .select("*")
       .order("log_date", { ascending: false });
 
@@ -281,7 +281,7 @@ function Workspace() {
     const today = todayISO();
 
     const { error: logError } = await supabase
-      .from("task_progress_logs" as any)
+      .from("task_progress_logs")
       .upsert(
         {
           task_id: selectedTask.id,

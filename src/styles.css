@@ -5,8 +5,11 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-display: "Fraunces", Georgia, serif;
-  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Manrope", system-ui, sans-serif;
+  --color-peach: var(--peach);
+  --color-gold: var(--gold);
+  --color-cover-ink: var(--cover-ink);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -54,14 +57,20 @@
 }
 
 :root {
+  --peach: oklch(0.91 0.066 52);
+  --gold: oklch(0.63 0.1 83);
+  --cover-ink: oklch(0.32 0.08 301);
+  --object-shadow:
+    0 12px 32px -16px oklch(0.38 0.09 300 / 0.24),
+    0 3px 0 color-mix(in oklab, var(--border) 70%, transparent);
   --radius: 1rem;
-  --background: oklch(0.975 0.012 310);
+  --background: oklch(0.976 0.012 290);
   --foreground: oklch(0.36 0.07 300);
   --card: oklch(0.995 0.005 320 / 0.82);
   --card-foreground: oklch(0.36 0.07 300);
   --popover: oklch(0.995 0.006 320);
   --popover-foreground: oklch(0.36 0.07 300);
-  --primary: oklch(0.66 0.14 335);
+  --primary: oklch(0.48 0.14 305);
   --primary-foreground: oklch(0.99 0.005 330);
   --secondary: oklch(0.93 0.04 300);
   --secondary-foreground: oklch(0.4 0.09 300);
@@ -99,6 +108,8 @@
 }
 
 .dark {
+  --peach: oklch(0.42 0.065 52);
+  --gold: oklch(0.8 0.09 83);
   color-scheme: dark;
   --background: oklch(0.2 0.045 295);
   --foreground: oklch(0.93 0.03 310);
@@ -139,26 +150,38 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html { -webkit-text-size-adjust: 100%; }
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
   body {
     font-family: var(--font-sans);
     color: var(--color-foreground);
     background:
-      radial-gradient(circle at 85% -5%, var(--glow), transparent 35%),
-      radial-gradient(circle at 0% 100%, oklch(0.85 0.07 280 / 0.25), transparent 40%),
+      linear-gradient(
+        135deg,
+        var(--background),
+        color-mix(in oklab, var(--sky) 22%, var(--background))
+      ),
       var(--color-background);
     background-attachment: fixed;
     min-height: 100dvh;
   }
-  h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.01em; }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: 0;
+  }
 }
 
 @utility panel {
   background-color: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: calc(var(--radius) + 8px);
-  box-shadow: 0 10px 30px -18px oklch(0.5 0.12 310 / 0.45);
+  box-shadow: var(--object-shadow);
   backdrop-filter: blur(10px);
 }
 @utility hero-gradient {
@@ -173,478 +196,362 @@
   opacity: 0.35;
 }
 
-@keyframes twinkle { 0%,100% { opacity: .35; transform: scale(.9) } 50% { opacity: 1; transform: scale(1.15) } }
-@keyframes floaty { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
-.twinkle { animation: twinkle 2.8s ease-in-out infinite; }
-.floaty { animation: floaty 5s ease-in-out infinite; }
-
-
-/* =====================================================
-   LUNARIA — CELESTIAL DREAMSCAPE VISUAL UPGRADE
-   Colorful • Ethereal • Playful • Magical • Deep
-   ===================================================== */
-
-/* ---------- 1. EXTENDED COLOR SYSTEM ---------- */
-
-:root {
-  --lunaria-pink: #ffb9d5;
-  --lunaria-lavender: #cbbaff;
-  --lunaria-purple: #a991f5;
-  --lunaria-blue: #a9caff;
-  --lunaria-cyan: #a8e9ec;
-  --lunaria-mint: #b5ead8;
-  --lunaria-yellow: #ffe6a6;
-  --lunaria-peach: #ffc9ae;
-
-  --lunaria-ink: #34294f;
-  --lunaria-muted: #817695;
-
-  --lunaria-glass: rgba(255,255,255,.48);
-  --lunaria-glass-strong: rgba(255,255,255,.68);
-  --lunaria-glass-border: rgba(255,255,255,.72);
-
-  --lunaria-depth:
-    0 18px 45px rgba(92, 66, 139, .13),
-    0 5px 14px rgba(92, 66, 139, .08),
-    inset 0 1px 0 rgba(255,255,255,.8);
-}
-
-/* ---------- 2. DREAMY ATMOSPHERE ---------- */
-
-body {
-  background-color: var(--background);
-
-  background-image:
-    radial-gradient(
-      ellipse at 8% 12%,
-      rgba(255,185,213,.42),
-      transparent 34%
-    ),
-    radial-gradient(
-      ellipse at 90% 8%,
-      rgba(169,202,255,.38),
-      transparent 32%
-    ),
-    radial-gradient(
-      ellipse at 75% 75%,
-      rgba(181,234,216,.3),
-      transparent 35%
-    ),
-    radial-gradient(
-      ellipse at 20% 90%,
-      rgba(203,186,255,.32),
-      transparent 38%
-    ),
-    linear-gradient(
-      145deg,
-      #fff9fd 0%,
-      #f5f0ff 45%,
-      #eef7ff 100%
-    );
-
-  background-attachment: fixed;
-  background-size: cover;
-}
-
-/* ---------- 3. GLASSMORPHISM PANELS ---------- */
-
-.panel {
-  position: relative;
-  overflow: hidden;
-
-  background:
-    linear-gradient(
-      140deg,
-      rgba(255,255,255,.78),
-      rgba(255,255,255,.4)
-    );
-
-  border: 1px solid rgba(255,255,255,.82);
-  border-radius: 26px;
-
-  box-shadow: var(--lunaria-depth);
-
-  backdrop-filter: blur(20px) saturate(145%);
-  -webkit-backdrop-filter: blur(20px) saturate(145%);
-
-  transition:
-    transform .35s cubic-bezier(.2,.8,.2,1),
-    box-shadow .35s ease,
-    border-color .35s ease;
-}
-
-.panel::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-
-  background:
-    linear-gradient(
-      125deg,
-      rgba(255,255,255,.5),
-      transparent 36%,
-      transparent 75%,
-      rgba(203,186,255,.12)
-    );
-}
-
-.panel:hover {
-  transform: translateY(-4px);
-
-  box-shadow:
-    0 25px 55px rgba(92,66,139,.17),
-    0 8px 20px rgba(255,185,213,.13),
-    inset 0 1px 0 white;
-}
-
-/* ---------- 4. CELESTIAL HERO ---------- */
-
-.hero-gradient {
-  position: relative;
-  overflow: hidden;
-
-  background:
-    radial-gradient(
-      circle at 15% 20%,
-      rgba(255,255,255,.55),
-      transparent 28%
-    ),
-    radial-gradient(
-      circle at 85% 15%,
-      rgba(255,230,166,.45),
-      transparent 25%
-    ),
-    radial-gradient(
-      circle at 75% 90%,
-      rgba(168,233,236,.4),
-      transparent 35%
-    ),
-    linear-gradient(
-      125deg,
-      #c4aafa,
-      #f3b9d6 48%,
-      #a9caff
-    );
-
-  border: 1px solid rgba(255,255,255,.65);
-  border-radius: 30px;
-
-  box-shadow:
-    0 25px 60px rgba(137,103,194,.2),
-    inset 0 1px 0 rgba(255,255,255,.7);
-}
-
-.hero-gradient::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-
-  background:
-    linear-gradient(
-      115deg,
-      transparent 20%,
-      rgba(255,255,255,.2) 48%,
-      transparent 75%
-    );
-
-  opacity: .7;
-}
-
-/* ---------- 5. STARFIELD ---------- */
-
-.starfield {
-  position: relative;
-  isolation: isolate;
-}
-
-.starfield::before,
-.starfield::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-}
-
-.starfield::before {
-  background-image:
-    radial-gradient(circle, white 1.5px, transparent 2px),
-    radial-gradient(circle, #e3c7ff 1px, transparent 2px),
-    radial-gradient(circle, #ffdfad 1.5px, transparent 2px);
-
-  background-size:
-    90px 90px,
-    130px 130px,
-    170px 170px;
-
-  background-position:
-    10px 20px,
-    40px 60px,
-    80px 30px;
-
-  opacity: .55;
-}
-
-/* ---------- 6. FLOATING ANIMATIONS ---------- */
-
-@keyframes lunaria-float {
-  0%, 100% {
-    transform: translateY(0) rotate(-1deg);
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.9);
   }
-
-  50% {
-    transform: translateY(-12px) rotate(1deg);
-  }
-}
-
-@keyframes lunaria-float-slow {
-  0%, 100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-7px);
-  }
-}
-
-@keyframes lunaria-twinkle {
-  0%, 100% {
-    opacity: .4;
-    transform: scale(.9);
-  }
-
   50% {
     opacity: 1;
-    transform: scale(1.2);
+    transform: scale(1.15);
   }
 }
-
-@keyframes lunaria-pulse {
-  0%, 100% {
-    box-shadow: 0 0 12px rgba(203,186,255,.2);
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0);
   }
-
   50% {
-    box-shadow: 0 0 28px rgba(203,186,255,.48);
+    transform: translateY(-8px);
   }
 }
-
-@keyframes lunaria-shimmer {
-  from {
-    background-position: -200% center;
-  }
-
-  to {
-    background-position: 200% center;
-  }
-}
-
-.floaty {
-  animation: lunaria-float 6s ease-in-out infinite;
-}
-
 .twinkle {
-  animation: lunaria-twinkle 3s ease-in-out infinite;
+  animation: twinkle 2.8s ease-in-out infinite;
+}
+.floaty {
+  animation: floaty 5s ease-in-out infinite;
 }
 
-.lunaria-float-slow {
-  animation: lunaria-float-slow 7s ease-in-out infinite;
+/* Celestial editorial world — all hues remain theme-aware. */
+body {
+  font-size: 14px;
 }
-
-.lunaria-pulse {
-  animation: lunaria-pulse 4s ease-in-out infinite;
+* {
+  letter-spacing: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
-
-/* ---------- 7. COLORFUL CARD ACCENTS ---------- */
-
-.lunaria-card-pink {
-  background: linear-gradient(145deg, #fff0f6, #ffe0ed);
-  border: 1px solid #ffd4e7;
+h1 {
+  font-weight: 600;
+  line-height: 1.08;
 }
-
-.lunaria-card-purple {
-  background: linear-gradient(145deg, #f4efff, #e8ddff);
-  border: 1px solid #dfd0ff;
+h2,
+h3 {
+  line-height: 1.2;
 }
-
-.lunaria-card-blue {
-  background: linear-gradient(145deg, #eff6ff, #dceaff);
-  border: 1px solid #d0e2ff;
+.universe-cover {
+  background-image: url("/art/lunaria-world.webp");
+  background-size: cover;
+  background-position: center 50%;
 }
-
-.lunaria-card-mint {
-  background: linear-gradient(145deg, #edfff8, #d8f5eb);
-  border: 1px solid #cceee1;
+.room-hero {
+  position: relative;
+  margin-bottom: 28px;
+  padding: 30px 0 26px;
+  border-bottom: 1px solid var(--border);
 }
-
-.lunaria-card-yellow {
-  background: linear-gradient(145deg, #fffbed, #fff0c9);
-  border: 1px solid #f9e5ae;
+.room-hero h1 {
+  font-size: 44px;
 }
-
-/* ---------- 8. DEPTH AND INTERACTION ---------- */
-
-.lunaria-depth {
-  transform-style: preserve-3d;
+.room-hero .room-mark {
+  color: var(--gold);
+}
+.world-welcome {
+  position: relative;
+  min-height: 310px;
+  padding: 42px 36px;
+  color: var(--cover-ink);
+  border-radius: 24px;
+  overflow: hidden;
+}
+.world-welcome::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--sky) 42%, var(--popover)) 0%,
+    transparent 78%
+  );
+  opacity: 0.72;
+}
+.world-welcome > * {
+  position: relative;
+}
+.world-welcome h1 {
+  font-size: 48px;
+  max-width: 480px;
+}
+.world-welcome p {
+  max-width: 380px;
+}
+.world-welcome .text-muted-foreground {
+  color: var(--cover-ink);
+}
+.room-kicker {
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 20px;
+}
+.dashboard-grid > article {
+  border-radius: 20px;
+  min-width: 0;
+}
+.dashboard-grid > article:nth-child(1) {
+  grid-column: span 2;
+  background: color-mix(in oklab, var(--butter) 34%, var(--card));
+}
+.dashboard-grid > article:nth-child(2) {
+  background: color-mix(in oklab, var(--sky) 32%, var(--card));
+}
+.dashboard-grid > article:nth-child(3) {
+  background: color-mix(in oklab, var(--lilac) 36%, var(--card));
+}
+.dashboard-grid > article:nth-child(4) {
+  background: color-mix(in oklab, var(--mint) 30%, var(--card));
+}
+.dashboard-grid > article:nth-child(5) {
+  background: color-mix(in oklab, var(--petal) 30%, var(--card));
+}
+.dashboard-grid > article:nth-child(6) {
+  grid-column: 1 / -1;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.dashboard-grid h2 {
+  font-size: 24px;
+}
+.page-enter {
+  animation: page-enter 0.35s ease-out;
+}
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.habit-object {
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 24px 24px 32px 12px;
+  box-shadow: var(--object-shadow);
   transition:
-    transform .35s ease,
-    box-shadow .35s ease;
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
 }
-
-.lunaria-depth:hover {
-  transform: perspective(900px) translateY(-7px) rotateX(2deg);
-
-  box-shadow:
-    0 25px 50px rgba(91,67,138,.16);
+.garden-mint {
+  background: color-mix(in oklab, var(--mint) 40%, var(--card));
 }
-
-.lunaria-glow {
-  box-shadow:
-    0 0 20px rgba(203,186,255,.3),
-    0 0 45px rgba(255,185,213,.16);
+.garden-pink {
+  background: color-mix(in oklab, var(--petal) 36%, var(--card));
 }
-
-/* ---------- 9. BUTTONS ---------- */
-
+.garden-sky {
+  background: color-mix(in oklab, var(--sky) 40%, var(--card));
+}
+.habit-flower {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  font-size: 54px;
+  border-radius: 40% 50% 42% 50%;
+  background: color-mix(in oklab, var(--card) 65%, transparent);
+  box-shadow: var(--object-shadow);
+}
+.photo-columns {
+  columns: 3;
+  column-gap: 20px;
+}
+.photo-object {
+  break-inside: avoid;
+  margin: 0 0 20px;
+  padding: 10px 10px 16px;
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: var(--object-shadow);
+  transition: transform 0.25s ease;
+}
+.photo-object img {
+  width: 100%;
+  border-radius: 7px;
+  height: auto;
+  max-height: 440px;
+  object-fit: cover;
+}
+.photo-placeholder {
+  aspect-ratio: 4/3;
+  display: grid;
+  place-items: center;
+  background: var(--sky);
+  border-radius: 7px;
+}
+.album-month {
+  margin-bottom: 36px;
+  scroll-margin-top: 100px;
+}
+.album-month h2 {
+  font-size: 32px;
+}
+.album-month header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.album-month header::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--border);
+}
+.album-timeline {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+.activity-line {
+  display: grid;
+  grid-template-columns: 54px 40px 1fr;
+  gap: 14px;
+  min-height: 92px;
+  position: relative;
+}
+.activity-line::after {
+  content: "";
+  position: absolute;
+  top: 44px;
+  bottom: 0;
+  left: 88px;
+  width: 1px;
+  background: var(--border);
+}
+.activity-line:last-child::after {
+  display: none;
+}
+.activity-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  margin-top: 4px;
+  background: var(--lilac);
+  color: var(--foreground);
+  box-shadow: var(--object-shadow);
+}
+.tone-habits,
+.tone-knowledge {
+  background: var(--mint);
+}
+.tone-memories,
+.tone-diary {
+  background: var(--petal);
+}
+.tone-workspace,
+.tone-calendar {
+  background: var(--sky);
+}
+.tone-recipes,
+.tone-daily {
+  background: var(--butter);
+}
 button {
   transition:
-    transform .22s ease,
-    box-shadow .22s ease,
-    filter .22s ease;
+    transform 0.2s ease,
+    background 0.2s ease;
 }
-
 button:active {
-  transform: scale(.97);
+  transform: scale(0.98);
 }
-
-button:focus-visible {
-  outline: 3px solid rgba(169,145,245,.5);
-  outline-offset: 3px;
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
-
-/* ---------- 10. INPUTS ---------- */
-
-input,
-textarea,
-select {
-  transition:
-    border-color .2s ease,
-    box-shadow .2s ease;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  border-color: #b9a4f5;
-  box-shadow: 0 0 0 3px rgba(185,164,245,.18);
-  outline: none;
-}
-
-/* ---------- 11. SCROLLBAR ---------- */
-
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #d4c3f4 transparent;
-}
-
-*::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
-}
-
-*::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    180deg,
-    #d9baf7,
-    #f2b9d6
-  );
-  border-radius: 20px;
-}
-
-/* ---------- 12. DARK MODE ---------- */
-
-.dark body {
-  background-color: #17152d;
-
-  background-image:
-    radial-gradient(
-      ellipse at 10% 10%,
-      rgba(139,103,211,.25),
-      transparent 35%
-    ),
-    radial-gradient(
-      ellipse at 90% 20%,
-      rgba(93,133,201,.2),
-      transparent 35%
-    ),
-    radial-gradient(
-      ellipse at 60% 90%,
-      rgba(190,113,175,.13),
-      transparent 40%
-    ),
-    linear-gradient(
-      145deg,
-      #17152d,
-      #242044,
-      #1b2943
-    );
-}
-
-.dark .panel {
-  background:
-    linear-gradient(
-      145deg,
-      rgba(58,48,91,.78),
-      rgba(36,32,65,.72)
-    );
-
-  border-color: rgba(220,205,255,.14);
-
-  box-shadow:
-    0 20px 50px rgba(0,0,0,.2),
-    inset 0 1px 0 rgba(255,255,255,.08);
-}
-
-.dark .hero-gradient {
-  background:
-    radial-gradient(circle at 15% 20%, rgba(255,255,255,.1), transparent 30%),
-    linear-gradient(125deg, #514078, #713e70 50%, #35577c);
-}
-
-/* ---------- 13. MOBILE ---------- */
-
-@media (max-width: 768px) {
-  .panel {
-    border-radius: 21px;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .habit-object:hover {
+    transform: perspective(900px) translateY(-4px) rotateX(1deg);
   }
-
-  .hero-gradient {
-    border-radius: 24px;
-  }
-
-  .panel:hover,
-  .lunaria-depth:hover {
-    transform: none;
-  }
-
-  body {
-    background-attachment: scroll;
+  .photo-object:hover {
+    transform: translateY(-4px) rotate(0.5deg);
   }
 }
-
-/* ---------- 14. ACCESSIBILITY ---------- */
-
+@media (max-width: 1100px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .dashboard-grid > article:nth-child(1) {
+    grid-column: span 1;
+  }
+  .photo-columns {
+    columns: 2;
+  }
+}
+@media (max-width: 640px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .room-hero {
+    padding: 20px 0;
+  }
+  .room-hero h1 {
+    font-size: 36px;
+  }
+  .world-welcome {
+    min-height: 300px;
+    padding: 28px 22px;
+    background-position: 60% center;
+  }
+  .world-welcome h1 {
+    font-size: 38px;
+    max-width: 280px;
+  }
+  .world-welcome p {
+    max-width: 250px;
+  }
+  .world-welcome::before {
+    background: linear-gradient(90deg, var(--sky), transparent);
+    opacity: 0.8;
+  }
+  .photo-columns {
+    columns: 1;
+  }
+  .activity-line {
+    grid-template-columns: 44px 36px 1fr;
+    gap: 10px;
+  }
+  .activity-line::after {
+    left: 71px;
+  }
+  .activity-icon {
+    width: 36px;
+    height: 36px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: .01ms !important;
+    animation: none !important;
+    transition: none !important;
     scroll-behavior: auto !important;
   }
 }
