@@ -97,20 +97,33 @@ function Workspace() {
   }
 
    async function refreshLogs() {
+  const { data: { user }, error: authError } =
+    await supabase.auth.getUser();
+
+  if (authError) {
+    alert(`Auth error: ${authError.message}`);
+    return;
+  }
+
   const { data, error } = await supabase
     .from("task_progress_logs")
     .select("*")
     .order("log_date", { ascending: false });
 
   if (error) {
-    console.error("Failed to load progress logs:", error);
-    alert(`Failed to load progress history: ${error.message}`);
+    alert(`History error: ${error.message}`);
     return;
   }
 
+  console.log("Logged in:", !!user);
+  console.log("Visible history rows:", data?.length ?? 0);
+
+  alert(
+    `Login: ${user ? "Yes" : "No"}\nVisible history rows: ${data?.length ?? 0}`
+  );
+
   setLogs((data ?? []) as ProgressLog[]);
    }
-
 
   // Automatically archive unfinished tasks after their deadline.
   useEffect(() => {
