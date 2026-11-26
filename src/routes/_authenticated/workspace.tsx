@@ -96,8 +96,7 @@ function Workspace() {
     await taskQuery.refetch();
   }
 
-  
-  async function refreshLogs() {
+   async function refreshLogs() {
   const { data, error } = await supabase
     .from("task_progress_logs")
     .select("*")
@@ -110,6 +109,8 @@ function Workspace() {
   }
 
   setLogs((data ?? []) as ProgressLog[]);
+   }
+
 
   // Automatically archive unfinished tasks after their deadline.
   useEffect(() => {
