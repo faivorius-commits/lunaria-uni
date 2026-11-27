@@ -26,7 +26,7 @@ type Task = {
   id: string;
   title: string;
   description?: string;
-  due_date: string | null;
+  deadline: string | null;
   done: boolean;
   task_type: TaskType;
   status: TaskStatus;
@@ -116,8 +116,8 @@ function Workspace() {
         (task) =>
           task.status === "active" &&
           !task.done &&
-          task.due_date &&
-          task.due_date < today
+          task.deadline &&
+          task.deadline < today
       );
 
       for (const task of expired) {
@@ -142,7 +142,7 @@ function Workspace() {
     };
   }, [
     tasks
-      .map((task) => `${task.id}:${task.status}:${task.due_date}`)
+      .map((task) => `${task.id}:${task.status}:${task.deadline}`)
       .join("|"),
   ]);
 
@@ -215,7 +215,7 @@ function Workspace() {
     const { error } = await supabase.from("lunaria_tasks").insert({
       title: title.trim(),
       description: description.trim(),
-      due_date: due,
+      deadline: due,
       task_type: type,
       status: "active",
       progress: 0,
@@ -657,7 +657,7 @@ function Workspace() {
 
                       <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                         <CalendarDays className="size-3.5" />
-                        Deadline: {formatDate(task.due_date)}
+                        Deadline: {formatDate(task.deadline)}
                       </p>
                     </div>
 
