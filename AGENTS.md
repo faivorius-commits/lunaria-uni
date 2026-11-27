@@ -35,4 +35,3 @@ use the editor.
 - Photo metadata belongs to user_files while originals remain in private user-prefixed Storage paths; undated legacy photos stay undated.
 - Activity history is written by database triggers on successful changes, never fabricated by the browser; render timestamps in the user's local timezone.
 - Keep the automatic activity timeline and manual diary in separate tabs, preserving the journal capability.
-- The device-store module groups local records, original file blobs, and activity events in one IndexedDB transaction to prevent partially saved local actions; it is not connected to app screens yet.
