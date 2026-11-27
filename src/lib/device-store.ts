@@ -92,7 +92,7 @@ class DeviceQuery<N extends Table> implements PromiseLike<Result<N>> {
   private async execute(): Promise<Result<N>> {
     try {
       const db = await database();
-      const tx = db.transaction(["records", "originals"], this.mode === "read" ? "readonly" : "readwrite");
+      const tx = db.transaction(["records", "originals"], "readwrite");
       const store = tx.objectStore("records");
       const stored = await store.index("table").getAll(this.table);
       let rows = stored.map(item => item.value);
