@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { FILE_CATEGORIES } from "@/lib/nav";
 import { uploadFiles } from "@/lib/files";
 import { useRows } from "@/lib/data";
-import { MemoryFields, blankMemory } from "./memory-fields";
 
 type Opts = { category?: string; collectionId?: string | null };
 const Ctx = createContext<(o?: Opts) => void>(() => {});
@@ -19,7 +18,6 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const [collectionId, setCollectionId] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
-  const [memory, setMemory] = useState(blankMemory);
   const input = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
   const collections = useRows("collections");
@@ -27,7 +25,6 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const show = (o?: Opts) => {
     setCategory(o?.category ?? "Memories");
     setCollectionId(o?.collectionId ?? "");
-    setMemory(blankMemory());
     setOpen(true);
   };
 
@@ -37,14 +34,13 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setBusy(true);
     setProgress(`Uploading ${files.length} file(s)…`);
     try {
-      await uploadFiles(files, category, collectionId || null, category === "Memories" ? { ...memory, memory_tags: memory.memory_tags.map(t => t.trim()).filter(Boolean) } : undefined);
+      await uploadFiles(files, category, collectionId || null);
       await qc.invalidateQueries({ queryKey: ["user_files"] });
       toast.success(`${files.length} file(s) tucked safely into ${category} ✧`);
       setOpen(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
     } finally {
-      await Promise.all([qc.invalidateQueries({ queryKey: ["user_files"] }), qc.invalidateQueries({ queryKey: ["activity_logs"] })]);
       setBusy(false);
       setProgress("");
       if (input.current) input.current.value = "";
@@ -55,7 +51,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={show}>
       {children}
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-3xl sm:max-w-md">
+        <DialogContent className="rounded-3xl sm:max-w-md">
           <DialogHeader className="items-center text-center">
             <div className="text-3xl text-primary twinkle">✧</div>
             <DialogTitle className="text-2xl">Add to your universe</DialogTitle>
@@ -72,13 +68,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
               {(collections.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
             </select>
           </label>
-          {category === "Memories" && <MemoryFields value={memory} onChange={setMemory} />}
-          <Button type="button" variant="outline" disabled={busy} onClick={() => input.current?.click()}
+          <button type="button" disabled={busy} onClick={() => input.current?.click()}
             className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-primary/40 bg-accent/40 px-4 py-8 text-center transition hover:bg-accent disabled:opacity-60">
             <UploadCloud className="size-8 text-primary" />
             <b>{busy ? progress : "Choose files to upload"}</b>
             <span className="text-xs text-muted-foreground">Photos · Videos · Audio · Music · PDFs · Documents — up to 50 MB each</span>
-          </Button>
+          </button>
           <input ref={input} type="file" multiple hidden accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt,.md,.csv,.ppt,.pptx,.xls,.xlsx" onChange={(e) => void handle(e.target.files)} />
           <p className="flex items-center gap-2 text-xs text-muted-foreground"><LockKeyhole className="size-3.5" /> Stored privately — only you can open these files.</p>
           <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>Maybe later</Button>

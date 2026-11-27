@@ -96,35 +96,14 @@ function Workspace() {
     await taskQuery.refetch();
   }
 
-   async function refreshLogs() {
-  const { data: { user }, error: authError } =
-    await supabase.auth.getUser();
+  async function refreshLogs() {
+    const { data, error } = await supabase
+      .from("task_progress_logs" as any)
+      .select("*")
+      .order("log_date", { ascending: false });
 
-  if (authError) {
-    alert(`Auth error: ${authError.message}`);
-    return;
+    if (!error) setLogs((data ?? []) as ProgressLog[]);
   }
-
-  const { data, error } = await supabase
-    .from("task_progress_logs")
-    .select("*")
-    .order("log_date", { ascending: false });
-
-  if (error) {
-    alert(`History error: ${error.message}`);
-    return;
-  }
-
-  console.log("Logged in:", !!user);
-  console.log("Visible history rows:", data?.length ?? 0);
-     
-alert(
-  `Login: ${user ? "Yes" : "No"}\n` +
-  `App User ID: ${user?.id ?? "NULL"}\n` +
-  `Visible history rows: ${data?.length ?? 0}`
-);
-  setLogs((data ?? []) as ProgressLog[]);
-   }
 
   // Automatically archive unfinished tasks after their deadline.
   useEffect(() => {
@@ -302,7 +281,7 @@ alert(
     const today = todayISO();
 
     const { error: logError } = await supabase
-      .from("task_progress_logs")
+      .from("task_progress_logs" as any)
       .upsert(
         {
           task_id: selectedTask.id,

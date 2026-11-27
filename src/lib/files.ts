@@ -24,9 +24,7 @@ export function safeName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120) || "file";
 }
 
-export type MemoryMetadata = { memory_title: string; memory_date: string | null; caption: string; memory_location: string; memory_category: string; memory_tags: string[] };
-
-export async function uploadFiles(files: File[], category: string, collectionId: string | null, memory?: MemoryMetadata) {
+export async function uploadFiles(files: File[], category: string, collectionId: string | null) {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) throw new Error("Please sign in first.");
   const uid = auth.user.id;
@@ -38,7 +36,6 @@ export async function uploadFiles(files: File[], category: string, collectionId:
     if (upErr) throw new Error(`${file.name}: ${upErr.message}`);
     const { error: rowErr } = await supabase.from("user_files").insert({
       user_id: uid, name: file.name, category, mime_type: type, size_bytes: file.size, storage_path: path, collection_id: collectionId,
-      ...(memory ?? {}),
     });
     if (rowErr) {
       await supabase.storage.from(BUCKET).remove([path]);

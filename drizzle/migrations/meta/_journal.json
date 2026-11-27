@@ -8,20 +8,6 @@
       "when": 1795603250299,
       "tag": "0000_lunaria_unified_schema",
       "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1795733433064,
-      "tag": "0001_lunaria_schedules_albums_activity",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1795733555630,
-      "tag": "0002_photo_album_category",
-      "breakpoints": true
     }
   ]
 }

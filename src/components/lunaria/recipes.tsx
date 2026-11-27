@@ -63,7 +63,7 @@ export function RecipesPanel() {
     setLoading(true);
 
     const { data, error } = await supabase
-      .from("recipes")
+      .from("recipes" as any)
       .select("*")
       .order("created_at", { ascending: false });
 
@@ -116,7 +116,7 @@ export function RecipesPanel() {
     setSaving(true);
 
     const { error } = await supabase
-      .from("recipes")
+      .from("recipes" as any)
       .insert({
         title: title.trim(),
         description: description.trim(),
@@ -144,7 +144,7 @@ export function RecipesPanel() {
     if (!confirm(`Delete "${recipe.title}"?`)) return;
 
     const { error } = await supabase
-      .from("recipes")
+      .from("recipes" as any)
       .delete()
       .eq("id", recipe.id);
 

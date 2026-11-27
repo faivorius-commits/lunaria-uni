@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -7,46 +8,11 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "17.1"
   }
   public: {
     Tables: {
-      activity_logs: {
-        Row: {
-          activity_type: string
-          created_at: string
-          description: string
-          entity_id: string | null
-          entity_type: string
-          id: string
-          title: string
-          user_id: string
-        }
-        Insert: {
-          activity_type: string
-          created_at?: string
-          description?: string
-          entity_id?: string | null
-          entity_type: string
-          id?: string
-          title: string
-          user_id: string
-        }
-        Update: {
-          activity_type?: string
-          created_at?: string
-          description?: string
-          entity_id?: string | null
-          entity_type?: string
-          id?: string
-          title?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       calendar_events: {
         Row: {
           created_at: string
@@ -198,34 +164,22 @@ export type Database = {
         Row: {
           created_at: string
           emoji: string
-          frequency: string
-          frequency_mode: string
-          frequency_target: number
           id: string
           name: string
-          target_days: number[]
           user_id: string
         }
         Insert: {
           created_at?: string
           emoji?: string
-          frequency?: string
-          frequency_mode?: string
-          frequency_target?: number
           id?: string
           name: string
-          target_days?: number[]
           user_id?: string
         }
         Update: {
           created_at?: string
           emoji?: string
-          frequency?: string
-          frequency_mode?: string
-          frequency_target?: number
           id?: string
           name?: string
-          target_days?: number[]
           user_id?: string
         }
         Relationships: []
@@ -270,7 +224,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          body: string
+          body?: string
           created_at?: string
           id?: string
           tags?: string[]
@@ -291,51 +245,89 @@ export type Database = {
       }
       lunaria_tasks: {
         Row: {
-          assigned_by: string
-          completed_at: string | null
-          created_at: string
+          id: string
+          user_id: string
+          title: string
           description: string
           done: boolean
           due_date: string | null
-          id: string
-          labels: string[]
-          progress: number
-          status: string
+          created_at: string
           task_type: string
-          title: string
-          user_id: string
+          status: string
+          progress: number
+          completed_at: string | null
+          labels: string[]
+          assigned_by: string
         }
         Insert: {
-          assigned_by?: string
-          completed_at?: string | null
-          created_at?: string
+          id?: string
+          user_id?: string
+          title: string
           description?: string
           done?: boolean
           due_date?: string | null
-          id?: string
-          labels?: string[]
-          progress?: number
-          status?: string
+          created_at?: string
           task_type?: string
-          title: string
-          user_id?: string
+          status?: string
+          progress?: number
+          completed_at?: string | null
+          labels?: string[]
+          assigned_by?: string
         }
         Update: {
-          assigned_by?: string
-          completed_at?: string | null
-          created_at?: string
+          id?: string
+          user_id?: string
+          title?: string
           description?: string
           done?: boolean
           due_date?: string | null
-          id?: string
-          labels?: string[]
-          progress?: number
-          status?: string
+          created_at?: string
           task_type?: string
-          title?: string
-          user_id?: string
+          status?: string
+          progress?: number
+          completed_at?: string | null
+          labels?: string[]
+          assigned_by?: string
         }
         Relationships: []
+      }
+      task_progress_logs: {
+        Row: {
+          id: string
+          task_id: string
+          user_id: string
+          log_date: string
+          progress_percent: number
+          progress_note: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          task_id: string
+          user_id?: string
+          log_date?: string
+          progress_percent: number
+          progress_note?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          task_id?: string
+          user_id?: string
+          log_date?: string
+          progress_percent?: number
+          progress_note?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_progress_logs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "lunaria_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -364,89 +356,6 @@ export type Database = {
         }
         Relationships: []
       }
-      recipes: {
-        Row: {
-          category: string
-          cook_minutes: number
-          created_at: string
-          description: string
-          difficulty: string
-          id: string
-          ingredients: string[]
-          prep_minutes: number
-          steps: string[]
-          title: string
-          tools: string[]
-          user_id: string
-        }
-        Insert: {
-          category?: string
-          cook_minutes?: number
-          created_at?: string
-          description?: string
-          difficulty?: string
-          id?: string
-          ingredients?: string[]
-          prep_minutes?: number
-          steps?: string[]
-          title: string
-          tools?: string[]
-          user_id?: string
-        }
-        Update: {
-          category?: string
-          cook_minutes?: number
-          created_at?: string
-          description?: string
-          difficulty?: string
-          id?: string
-          ingredients?: string[]
-          prep_minutes?: number
-          steps?: string[]
-          title?: string
-          tools?: string[]
-          user_id?: string
-        }
-        Relationships: []
-      }
-      task_progress_logs: {
-        Row: {
-          created_at: string
-          id: string
-          log_date: string
-          progress_note: string
-          progress_percent: number
-          task_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          log_date?: string
-          progress_note: string
-          progress_percent?: number
-          task_id: string
-          user_id?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          log_date?: string
-          progress_note?: string
-          progress_percent?: number
-          task_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_progress_logs_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "lunaria_tasks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_files: {
         Row: {
           caption: string
@@ -454,11 +363,6 @@ export type Database = {
           collection_id: string | null
           created_at: string
           id: string
-          memory_category: string
-          memory_date: string | null
-          memory_location: string
-          memory_tags: string[]
-          memory_title: string
           mime_type: string
           name: string
           size_bytes: number
@@ -471,11 +375,6 @@ export type Database = {
           collection_id?: string | null
           created_at?: string
           id?: string
-          memory_category?: string
-          memory_date?: string | null
-          memory_location?: string
-          memory_tags?: string[]
-          memory_title?: string
           mime_type?: string
           name: string
           size_bytes?: number
@@ -488,11 +387,6 @@ export type Database = {
           collection_id?: string | null
           created_at?: string
           id?: string
-          memory_category?: string
-          memory_date?: string | null
-          memory_location?: string
-          memory_tags?: string[]
-          memory_title?: string
           mime_type?: string
           name?: string
           size_bytes?: number
@@ -550,8 +444,7 @@ export type Tables<
     : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
         DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -595,7 +488,7 @@ export type TablesUpdate<
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DefaultSchema[ "Tables" ][TableName] extends {
       Update: infer U
     }
     ? U
@@ -637,7 +530,7 @@ export type CompositeTypes<
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  ? DatabaseWithoutInternals[PublicCompositeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
