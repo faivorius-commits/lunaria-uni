@@ -47,7 +47,7 @@ async function fetchWeather(city: string): Promise<W> {
   const p = g.results?.[0];
 
   if (!p) {
-    throw new Error(`Couldn't find “${city}”.`);
+    throw new Error(`Couldn't find "${city}".`);
   }
 
   const f = await fetch(
@@ -87,36 +87,48 @@ function Weather() {
     setBusy(true);
 
     try {
-      setW(await fetchWeather(c));
-    } catch (e) {
-      toast.error((e as Error).message);
+      const result = await fetchWeather(c);
+      setW(result);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Unable to load weather."
+      );
     } finally {
       setBusy(false);
     }
   }
 
-  function makeHomeCity() {
-    if (!profile.data?.id) {
-      toast.error("Profile is not ready. Please try again.");
-      return;
-    }
-
+  async function makeHomeCity() {
     if (!w) {
       toast.error("Search for a city first.");
       return;
     }
 
-    save.mutate(
-      { prefs: { weatherCity: w.place } },
-      {
-        onSuccess: () => {
-          toast.success(`${w.place} is now your home city!`);
-        },
-        onError: (error) => {
-          toast.error(`Couldn't save home city: ${error.message}`);
-        },
+    try {
+      let currentProfile = profile.data;
+
+      if (!currentProfile?.id) {
+        const result = await profile.refetch();
+        currentProfile = result.data ?? undefined;
       }
-    );
+
+      if (!currentProfile?.id) {
+        toast.error("Profile not found. Please refresh the page.");
+        return;
+      }
+
+      await save.mutateAsync({
+        prefs: { weatherCity: w.place },
+      });
+
+      toast.success(`${w.place} is now your home city!`);
+    } catch (error) {
+      toast.error(
+        `Couldn't save home city: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
   }
 
   useEffect(() => {
@@ -156,7 +168,11 @@ function Weather() {
             onChange={(e) => setCity(e.target.value)}
           />
 
-          <Button className="rounded-full" disabled={busy}>
+          <Button
+            type="submit"
+            className="rounded-full"
+            disabled={busy}
+          >
             {busy ? "…" : "Find weather"}
           </Button>
         </form>
@@ -169,6 +185,7 @@ function Weather() {
               </div>
 
               <h2 className="mt-2 text-2xl">{w.place}</h2>
+
               <p className="text-sm text-muted-foreground">
                 {w.country}
               </p>
@@ -187,7 +204,7 @@ function Weather() {
                 variant="outline"
                 size="sm"
                 className="mt-3 rounded-full"
-                disabled={save.isPending || !profile.data}
+                disabled={save.isPending}
                 onClick={makeHomeCity}
               >
                 <Star
