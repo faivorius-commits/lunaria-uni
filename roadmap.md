@@ -7,4 +7,6 @@
 - [ ] Validate calculations, ownership, real workflows and mobile layouts.
 
 ## Permintaan terbaru
-- [ ] Hapus sistem login, bukan PIN; tentukan penyimpanan tanpa akun sambil menjaga data Cloud tetap privat.
+- [ ] Hapus login dan arahkan halaman masuk ke Lunaria; pertahankan PIN.
+- [ ] Simpan semua catatan, profil, aktivitas, dan berkas baru di perangkat; biarkan data Cloud lama tetap privat.
+- [ ] Uji penyimpanan setelah memuat ulang, unggahan foto, aktivitas, dan tampilan seluler.
