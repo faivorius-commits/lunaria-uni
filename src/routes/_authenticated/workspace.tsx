@@ -668,3 +668,158 @@ function Workspace() {
                       aria-label="Delete task"
                     >
                       <Trash2 className="size-4" />
+                      
+                    </button>
+                  </div>
+
+                  {isLong && (
+                    <div className="mt-4">
+                      <div className="mb-2 flex justify-between text-xs">
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <TrendingUp className="size-3.5" />
+                          Overall progress
+                        </span>
+                        <b>{task.progress ?? 0}%</b>
+                      </div>
+
+                      <div className="h-2 overflow-hidden rounded-full bg-secondary">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-violet-400 to-pink-400 transition-all"
+                          style={{ width: `${task.progress ?? 0}%` }}
+                        />
+                      </div>
+
+                      {task.status === "active" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-3 rounded-full"
+                          onClick={() => {
+                            setSelectedTask(task);
+                            setProgressValue(String(task.progress ?? 0));
+                          }}
+                        >
+                          <Plus className="mr-1 size-3.5" />
+                          Add today's progress
+                        </Button>
+                      )}
+
+                      <div className="mt-4">
+                        <p className="mb-2 flex items-center gap-2 text-xs font-semibold">
+                          <History className="size-3.5" />
+                          Daily progress history
+                        </p>
+
+                        {history.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">
+                            No progress entries yet.
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {history.map((log) => (
+                              <div
+                                key={log.id}
+                                className="rounded-xl bg-secondary/60 p-3"
+                              >
+                                <div className="mb-1 flex justify-between text-xs">
+                                  <b>{formatDate(log.log_date)}</b>
+                                  <span>{log.progress_percent}%</span>
+                                </div>
+                                <p className="text-sm">{log.progress_note}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {task.status === "active" && (
+                    <Button
+                      size="sm"
+                      className="mt-4 rounded-full"
+                      onClick={() => completeTask(task)}
+                    >
+                      <Check className="mr-1 size-4" />
+                      Mark as completed
+                    </Button>
+                  )}
+
+                  {task.status === "failed" && (
+                    <p className="mt-3 flex items-center gap-2 text-xs text-rose-500">
+                      <XCircle className="size-4" />
+                      Deadline passed before completion.
+                    </p>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {selectedTask && (
+        <div className="panel mb-6 p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <PanelTitle icon={TrendingUp} title="Today's progress" />
+            <button
+              onClick={() => setSelectedTask(null)}
+              aria-label="Close"
+            >
+              <XCircle className="size-5" />
+            </button>
+          </div>
+
+          <p className="mb-3 text-sm text-muted-foreground">
+            {selectedTask.title}
+          </p>
+
+          <form onSubmit={saveDailyProgress} className="space-y-3">
+            <label className="text-sm font-medium">
+              What did you work on today?
+            </label>
+
+            <textarea
+              className={fieldCls}
+              rows={3}
+              placeholder="Write a little update about today's work..."
+              value={progressNote}
+              onChange={(e) => setProgressNote(e.target.value)}
+              required
+            />
+
+            <label className="text-sm font-medium">
+              Overall progress (%)
+            </label>
+
+            <input
+              className={fieldCls}
+              type="number"
+              min="0"
+              max="99"
+              value={progressValue}
+              onChange={(e) => setProgressValue(e.target.value)}
+              required
+            />
+
+            <p className="text-xs text-muted-foreground">
+              You can save one progress entry per day. Saving again
+              today updates that day's entry.
+            </p>
+
+            <Button disabled={saving || !progressNote.trim()}>
+              {saving ? "Saving..." : "Save daily progress"}
+            </Button>
+          </form>
+        </div>
+      )}
+
+      <FileGallery
+        filter={(f) => f.category === "Workspace"}
+        category="Workspace"
+        emptyTitle="No project files yet"
+      />
+    </>
+  );
+}
+
