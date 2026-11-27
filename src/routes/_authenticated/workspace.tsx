@@ -24,21 +24,21 @@ type TaskStatus = "active" | "completed" | "failed";
 
 type Task = {
   id: string;
+  user_id: string;
   title: string;
-  description?: string;
   deadline: string | null;
-  done: boolean;
   task_type: TaskType;
+  label: string;
+  assigned_by: string;
   status: TaskStatus;
   progress: number;
-  created_at: string;
-  labels: string[];
-  assigned_by: string;
+  completed_at: string | null;
 };
 
 type ProgressLog = {
   id: string;
   task_id: string;
+  user_id: string;
   log_date: string;
   progress_note: string;
   progress_percent: number;
@@ -70,8 +70,13 @@ const formatDate = (date?: string | null) =>
       })
     : "No deadline";
 
+const parseLabels = (value?: string | null): string[] =>
+  value
+    ? value.split(",").map((item) => item.trim()).filter(Boolean)
+    : [];
+
 function Workspace() {
-  const taskQuery = useRows("lunaria_tasks");
+  const taskQuery = useRows("lunaria_tasks", "deadline", true);
   const tasks = (taskQuery.data ?? []) as unknown as Task[];
 
   const [logs, setLogs] = useState<ProgressLog[]>([]);
@@ -79,7 +84,6 @@ function Workspace() {
   const [type, setType] = useState<TaskType>("small");
 
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [due, setDue] = useState("");
   const [assignedBy, setAssignedBy] = useState("");
 
@@ -102,10 +106,16 @@ function Workspace() {
       .select("*")
       .order("log_date", { ascending: false });
 
-    if (!error) setLogs((data ?? []) as ProgressLog[]);
+    if (!error) {
+      setLogs((data ?? []) as ProgressLog[]);
+    }
   }
 
-  // Automatically archive unfinished tasks after their deadline.
+  useEffect(() => {
+    refreshLogs();
+  }, []);
+
+  // Automatically mark overdue active tasks as failed.
   useEffect(() => {
     let cancelled = false;
 
@@ -115,7 +125,6 @@ function Workspace() {
       const expired = tasks.filter(
         (task) =>
           task.status === "active" &&
-          !task.done &&
           task.deadline &&
           task.deadline < today
       );
@@ -146,23 +155,18 @@ function Workspace() {
       .join("|"),
   ]);
 
-  useEffect(() => {
-    refreshLogs();
-  }, []);
-
   const availableLabels = useMemo(() => {
-    const labels = tasks.flatMap((task) => task.labels ?? []);
+    const labels = tasks.flatMap((task) => parseLabels(task.label));
     return [...new Set([...LABEL_PRESETS, ...labels])].sort();
   }, [tasks]);
 
   const filteredTasks = useMemo(
     () =>
       tasks.filter((task) => {
-        const status = task.status ?? (task.done ? "completed" : "active");
-        const matchesStatus = status === show;
+        const matchesStatus = task.status === show;
         const matchesLabel =
           labelFilter === "all" ||
-          (task.labels ?? []).includes(labelFilter);
+          parseLabels(task.label).includes(labelFilter);
 
         return matchesStatus && matchesLabel;
       }),
@@ -174,7 +178,7 @@ function Workspace() {
   ).length;
 
   const completedCount = tasks.filter(
-    (task) => task.status === "completed" || task.done
+    (task) => task.status === "completed"
   ).length;
 
   const failedCount = tasks.filter(
@@ -212,33 +216,41 @@ function Workspace() {
 
     setSaving(true);
 
-    const { error } = await supabase.from("lunaria_tasks").insert({
-      title: title.trim(),
-      description: description.trim(),
-      deadline: due,
-      task_type: type,
-      status: "active",
-      progress: 0,
-      done: false,
-      labels: selectedLabels,
-      assigned_by: assignedBy.trim(),
-    } as any);
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-    setSaving(false);
+      if (userError) throw userError;
+      if (!user) throw new Error("Please sign in again.");
 
-    if (error) {
-      alert(error.message);
-      return;
+      const { error } = await supabase.from("lunaria_tasks").insert({
+        user_id: user.id,
+        title: title.trim(),
+        deadline: due,
+        task_type: type,
+        status: "active",
+        progress: 0,
+        label: selectedLabels.join(", "),
+        assigned_by: assignedBy.trim(),
+      } as any);
+
+      if (error) throw error;
+
+      setTitle("");
+      setDue("");
+      setAssignedBy("");
+      setSelectedLabels([]);
+      setCustomLabel("");
+
+      await refreshTasks();
+      alert("Task created successfully!");
+    } catch (error: any) {
+      alert(error.message || "Could not create task.");
+    } finally {
+      setSaving(false);
     }
-
-    setTitle("");
-    setDescription("");
-    setDue("");
-    setAssignedBy("");
-    setSelectedLabels([]);
-    setCustomLabel("");
-
-    await refreshTasks();
   }
 
   async function completeTask(task: Task) {
@@ -251,7 +263,6 @@ function Workspace() {
     const { error } = await supabase
       .from("lunaria_tasks")
       .update({
-        done: true,
         status: "completed",
         progress: 100,
         completed_at: new Date().toISOString(),
@@ -278,42 +289,48 @@ function Workspace() {
 
     setSaving(true);
 
-    const today = todayISO();
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-    const { error: logError } = await supabase
-      .from("task_progress_logs" as any)
-      .upsert(
-        {
-          task_id: selectedTask.id,
-          log_date: today,
-          progress_note: progressNote.trim(),
-          progress_percent: newProgress,
-        },
-        { onConflict: "task_id,log_date" }
-      );
+      if (userError) throw userError;
+      if (!user) throw new Error("Please sign in again.");
 
-    if (logError) {
+      const today = todayISO();
+
+      const { error: logError } = await supabase
+        .from("task_progress_logs" as any)
+        .upsert(
+          {
+            task_id: selectedTask.id,
+            user_id: user.id,
+            log_date: today,
+            progress_note: progressNote.trim(),
+            progress_percent: newProgress,
+          },
+          { onConflict: "task_id,log_date" }
+        );
+
+      if (logError) throw logError;
+
+      const { error: taskError } = await supabase
+        .from("lunaria_tasks")
+        .update({ progress: newProgress } as any)
+        .eq("id", selectedTask.id);
+
+      if (taskError) throw taskError;
+
+      setProgressNote("");
+      setSelectedTask(null);
+
+      await Promise.all([refreshTasks(), refreshLogs()]);
+    } catch (error: any) {
+      alert(error.message || "Could not save progress.");
+    } finally {
       setSaving(false);
-      alert(logError.message);
-      return;
     }
-
-    const { error: taskError } = await supabase
-      .from("lunaria_tasks")
-      .update({ progress: newProgress } as any)
-      .eq("id", selectedTask.id);
-
-    setSaving(false);
-
-    if (taskError) {
-      alert(taskError.message);
-      return;
-    }
-
-    setProgressNote("");
-    setSelectedTask(null);
-
-    await Promise.all([refreshTasks(), refreshLogs()]);
   }
 
   async function deleteTask(task: Task) {
@@ -410,14 +427,6 @@ function Workspace() {
             onChange={(e) => setTitle(e.target.value)}
             maxLength={240}
             required
-          />
-
-          <textarea
-            className={fieldCls}
-            placeholder="Description (optional)"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={2}
           />
 
           {/* LABEL SELECTION */}
@@ -525,7 +534,7 @@ function Workspace() {
 
           <Button disabled={saving || !title.trim() || !due}>
             <Plus className="mr-1 size-4" />
-            Create {type === "small" ? "Small Task" : "Long Task"}
+            {saving ? "Creating..." : `Create ${type === "small" ? "Small Task" : "Long Task"}`}
           </Button>
         </form>
       </section>
@@ -590,6 +599,7 @@ function Workspace() {
             {filteredTasks.map((task) => {
               const history = taskLogs(task.id);
               const isLong = task.task_type === "long";
+              const labels = parseLabels(task.label);
 
               return (
                 <article
@@ -626,16 +636,9 @@ function Workspace() {
                         {task.title}
                       </h3>
 
-                      {task.description && (
-                        <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
-                          {task.description}
-                        </p>
-                      )}
-
-                      {/* TASK LABELS */}
-                      {(task.labels ?? []).length > 0 && (
+                      {labels.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-1.5">
-                          {(task.labels ?? []).map((label) => (
+                          {labels.map((label) => (
                             <span
                               key={label}
                               className="rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-xs text-primary"
@@ -647,7 +650,6 @@ function Workspace() {
                         </div>
                       )}
 
-                      {/* ASSIGNED BY */}
                       {task.assigned_by && (
                         <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                           <UserRound className="size-3.5" />
@@ -667,172 +669,3 @@ function Workspace() {
                       aria-label="Delete task"
                     >
                       <Trash2 className="size-4" />
-                    </button>
-                  </div>
-
-                  {/* LONG TASK PROGRESS */}
-                  {isLong && (
-                    <div className="mt-4">
-                      <div className="mb-2 flex justify-between text-xs">
-                        <span className="flex items-center gap-1 text-muted-foreground">
-                          <TrendingUp className="size-3.5" />
-                          Overall progress
-                        </span>
-                        <b>{task.progress ?? 0}%</b>
-                      </div>
-
-                      <div className="h-2 overflow-hidden rounded-full bg-secondary">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-violet-400 to-pink-400 transition-all"
-                          style={{
-                            width: `${task.progress ?? 0}%`,
-                          }}
-                        />
-                      </div>
-
-                      {task.status === "active" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mt-3 rounded-full"
-                          onClick={() => {
-                            setSelectedTask(task);
-                            setProgressValue(
-                              String(task.progress ?? 0)
-                            );
-                          }}
-                        >
-                          <Plus className="mr-1 size-3.5" />
-                          Add today's progress
-                        </Button>
-                      )}
-
-                      <div className="mt-4">
-                        <p className="mb-2 flex items-center gap-2 text-xs font-semibold">
-                          <History className="size-3.5" />
-                          Daily progress history
-                        </p>
-
-                        {history.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">
-                            No progress entries yet.
-                          </p>
-                        ) : (
-                          <div className="space-y-2">
-                            {history.map((log) => (
-                              <div
-                                key={log.id}
-                                className="rounded-xl bg-secondary/60 p-3"
-                              >
-                                <div className="mb-1 flex justify-between text-xs">
-                                  <b>{formatDate(log.log_date)}</b>
-                                  <span>{log.progress_percent}%</span>
-                                </div>
-                                <p className="text-sm">
-                                  {log.progress_note}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* COMPLETE TASK */}
-                  {task.status === "active" && (
-                    <Button
-                      size="sm"
-                      className="mt-4 rounded-full"
-                      onClick={() => completeTask(task)}
-                    >
-                      <Check className="mr-1 size-4" />
-                      Mark as completed
-                    </Button>
-                  )}
-
-                  {task.status === "failed" && (
-                    <p className="mt-3 flex items-center gap-2 text-xs text-rose-500">
-                      <XCircle className="size-4" />
-                      Deadline passed before completion.
-                    </p>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* DAILY PROGRESS FORM */}
-      {selectedTask && (
-        <div className="panel mb-6 p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <PanelTitle
-              icon={TrendingUp}
-              title="Today's progress"
-            />
-
-            <button
-              onClick={() => setSelectedTask(null)}
-              aria-label="Close"
-            >
-              <XCircle className="size-5" />
-            </button>
-          </div>
-
-          <p className="mb-3 text-sm text-muted-foreground">
-            {selectedTask.title}
-          </p>
-
-          <form
-            onSubmit={saveDailyProgress}
-            className="space-y-3"
-          >
-            <label className="text-sm font-medium">
-              What did you work on today?
-            </label>
-
-            <textarea
-              className={fieldCls}
-              rows={3}
-              placeholder="Write a little update about today's work..."
-              value={progressNote}
-              onChange={(e) => setProgressNote(e.target.value)}
-              required
-            />
-
-            <label className="text-sm font-medium">
-              Overall progress (%)
-            </label>
-
-            <input
-              className={fieldCls}
-              type="number"
-              min="0"
-              max="99"
-              value={progressValue}
-              onChange={(e) => setProgressValue(e.target.value)}
-              required
-            />
-
-            <p className="text-xs text-muted-foreground">
-              You can save one progress entry per day. Saving again
-              today updates that day's entry.
-            </p>
-
-            <Button disabled={saving || !progressNote.trim()}>
-              Save daily progress
-            </Button>
-          </form>
-        </div>
-      )}
-
-      <FileGallery
-        filter={(f) => f.category === "Workspace"}
-        category="Workspace"
-        emptyTitle="No project files yet"
-      />
-    </>
-  );
-}
